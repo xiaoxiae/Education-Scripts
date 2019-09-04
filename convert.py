@@ -109,11 +109,17 @@ def delete_files(files):
         os.remove(f)
 
 
+# check for empty arguments
+if len(sys.argv) == 1:
+    exit("Nothing to convert!")
+
 # make note of the generated files to remove them all after the conversions
 generated_files = []
 
 # go through the specified markdown files
 for md_file_name in sys.argv[1:]:
+    print(f"Processing {md_file_name}:")
+
     # for finding the links to xournal files
     xournal_regex = compile(r"\[(.*)]\((.+?).xopp\)", MULTILINE)
 
@@ -126,8 +132,13 @@ for md_file_name in sys.argv[1:]:
             xopp_file_name = match.group(2)
 
             # perform the conversions and the croppings
+            print(f"- converting {xopp_file_name}.xopp to SVG...")
             xopp_to_svg(xopp_file_name + ".xopp", xopp_file_name + ".svg")
+
+            print("- cropping SVG...")
             crop_svg_file(xopp_file_name + ".svg")
+
+            print(f"- converting {xopp_file_name}.svg to PNG...")
             svg_to_png(xopp_file_name + ".svg", xopp_file_name + ".png")
 
             generated_files += [xopp_file_name + ".svg", xopp_file_name + ".png"]
@@ -138,9 +149,15 @@ for md_file_name in sys.argv[1:]:
         output_file.write(sub(r"\[(.*)]\((.+?).xopp\)", r"![\1](\2.png)", contents))
 
     # convert the file to pdf
+    print("- generating resulting PDF...")
     md_to_pdf(dummy_file_name, md_file_name[:-2] + "pdf")
 
     generated_files += [dummy_file_name]
 
+    print()
+
 # clean-up after the script is done
+print("Cleaning up...")
 delete_files(generated_files)
+
+print("Done!\n")
