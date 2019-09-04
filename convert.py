@@ -1,10 +1,18 @@
 import os, shutil, glob  # folder + path utilities
-from subprocess import run  # executing shell commands
-from re import sub, compile, MULTILINE
+from subprocess import call, DEVNULL  # executing shell commands
+from re import sub, compile, MULTILINE  # for cropping
 
 import random  # generating random strings for cache
 
 import sys  # command line interaction
+
+
+def run_shell_command(command, silent=True):
+    """Run a shell command."""
+    if silent:
+        call(command, stderr=DEVNULL, stdout=DEVNULL)
+    else:
+        call(command)
 
 
 def generate_random_string(length):
@@ -14,17 +22,17 @@ def generate_random_string(length):
 
 def xopp_to_svg(input_file, output_file):
     """Convert a .xopp file to a .svg file using Xournal++ command line interface."""
-    run(["xournalpp", f"--create-img={output_file}", input_file])
+    run_shell_command(["xournalpp", f"--create-img={output_file}", input_file])
 
 
 def svg_to_png(input_file, output_file):
     """Convert a .svg file to a .png file using ImageMagic."""
-    run(["convert", "-density", "400", input_file, output_file])
+    run_shell_command(["convert", "-density", "400", input_file, output_file])
 
 
 def md_to_pdf(input_file, output_file):
     """Convert a .md file to a .pdf file using Pandoc."""
-    run(
+    run_shell_command(
         [
             "pandoc",
             input_file,
