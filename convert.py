@@ -27,7 +27,9 @@ def xopp_to_svg(input_file, output_file):
 
 def svg_to_png(input_file, output_file):
     """Convert a .svg file to a .png file using ImageMagic."""
-    run_shell_command(["convert", "-density", "400", input_file, output_file])
+    run_shell_command(
+        ["convert", "-density", "400", "-scale", "175%", input_file, output_file]
+    )
 
 
 def md_to_pdf(input_file, output_file):
