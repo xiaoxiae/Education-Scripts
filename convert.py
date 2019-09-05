@@ -1,9 +1,7 @@
 import os, shutil, glob  # folder + path utilities
 from subprocess import call, DEVNULL  # executing shell commands
 from re import sub, compile, MULTILINE  # for cropping
-
 import random  # generating random strings for cache
-
 import sys  # command line interaction
 
 
@@ -113,43 +111,54 @@ def delete_files(files):
 if len(sys.argv) == 1:
     exit("Nothing to convert!")
 
-# make note of the generated files to remove them all after the conversions
+# make note of the generated files to remove them after the conversions
 generated_files = []
 
 # go through the specified markdown files
 for md_file_name in sys.argv[1:]:
     print(f"Processing {md_file_name}:")
 
-    # for finding the links to xournal files
-    xournal_regex = compile(r"\[(.*)]\((.+?).xopp\)", MULTILINE)
-
     # read the md file
-    with open(md_file_name, "r") as md_file:
-        contents = md_file.read()
+    with open(md_file_name, "r") as f:
+        contents = f.read()
 
         # find each of the .xopp files in the .md file
-        for match in xournal_regex.finditer(contents):
-            xopp_file_name = match.group(2)
+        for match in compile(r"\[(.*)]\((.+?).xopp\)", MULTILINE).finditer(contents):
+            file_label, file_name = match.groups()
 
-            # perform the conversions and the croppings
-            print(f"- converting {xopp_file_name}.xopp to SVG...")
-            xopp_to_svg(xopp_file_name + ".xopp", xopp_file_name + ".svg")
+            # convert the .xopp file to .svg file(s)
+            print(f"- converting {file_name}.xopp to SVG...")
+            xopp_to_svg(f"{file_name}.xopp", f"{file_name}.svg")
 
-            print("- cropping SVG...")
-            crop_svg_file(xopp_file_name + ".svg")
+            # get all .svg files generated from the .xopp file
+            file_names = [f[:-4] for f in glob.glob(f"{file_name}*.svg")]
 
-            print(f"- converting {xopp_file_name}.svg to PNG...")
-            svg_to_png(xopp_file_name + ".svg", xopp_file_name + ".png")
+            # covert the .svg files to .png, cropping them in the process
+            for file_name in file_names:
+                print("- cropping SVG...")
+                crop_svg_file(f"{file_name}.svg")
 
-            generated_files += [xopp_file_name + ".svg", xopp_file_name + ".png"]
+                print(f"- converting {file_name}.svg to PNG...")
+                svg_to_png(f"{file_name}.svg", f"{file_name}.png")
 
-    # generate a dummy md file with the substitutions
-    dummy_file_name = generate_random_string(10) + ".md"
-    with open(dummy_file_name, "w") as output_file:
-        output_file.write(sub(r"\[(.*)]\((.+?).xopp\)", r"![\1](\2.png)", contents))
+                generated_files += [f"{file_name}.svg", f"{file_name}.png"]
 
-    # convert the file to pdf
+            # replace the links to the .xopp files to the .png images
+            contents = contents.replace(
+                match.group(0),
+                "\n\n".join(
+                    [f"![{file_label}]({file_name}.png)" for file_name in file_names]
+                ),
+            )
+
     print("- generating resulting PDF...")
+
+    # create a dummy .md file for the conversion
+    dummy_file_name = generate_random_string(10) + ".md"
+    with open(dummy_file_name, "w") as f:
+        f.write(contents)
+
+    # covnert the .md file to .pdf
     md_to_pdf(dummy_file_name, md_file_name[:-2] + "pdf")
 
     generated_files += [dummy_file_name]
