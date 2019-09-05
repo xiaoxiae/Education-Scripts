@@ -13,13 +13,14 @@ def run_shell_command(command, silent=True):
         call(command)
 
 
-def generate_random_string(length):
-    """Generates a random hexadecimal number of specified length."""
+def generate_random_hex_number(length):
+    """Generates a random hexadecimal number (with possible leading zeroes!) of the
+    specified length."""
     return "".join(random.choice("0123456789abcdef") for _ in range(length))
 
 
 def xopp_to_svg(input_file, output_file):
-    """Convert a .xopp file to a .svg file using Xournal++ command line interface."""
+    """Convert a .xopp file to a .svg file using Xournal++."""
     run_shell_command(["xournalpp", f"--create-img={output_file}", input_file])
 
 
@@ -55,7 +56,7 @@ def crop_svg_file(file_name, margin=15):
         min_x, min_y, max_x, max_y = inf, inf, -inf, -inf
         contents = svg_file.read()
 
-        # regex to find points of the paths of the svg
+        # regex to find points of the paths of the svg file objects
         regex = compile(
             r'<path(.*?)d="M ([0-9.]+) ([0-9.]+) L ([0-9.]+) ([0-9.]+) "(.*?)\/>',
             MULTILINE,
@@ -154,7 +155,7 @@ for md_file_name in sys.argv[1:]:
     print("- generating resulting PDF...")
 
     # create a dummy .md file for the conversion
-    dummy_file_name = generate_random_string(10) + ".md"
+    dummy_file_name = generate_random_hex_number(10) + ".md"
     with open(dummy_file_name, "w") as f:
         f.write(contents)
 
