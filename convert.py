@@ -24,10 +24,10 @@ def xopp_to_svg(input_file, output_file):
     run_shell_command(["xournalpp", f"--create-img={output_file}", input_file])
 
 
-def svg_to_png(input_file, output_file):
-    """Convert a .svg file to a .png file using ImageMagic."""
+def svg_to_pdf(input_file, output_file):
+    """Convert a .svg file to a .pdf file using InkScape."""
     run_shell_command(
-        ["convert", "-density", "400", "-scale", "175%", input_file, output_file]
+        ["inkscape", "-C", "-z", f"--file={input_file}", f"--export-pdf={output_file}"]
     )
 
 
@@ -134,21 +134,21 @@ for md_file_name in sys.argv[1:]:
             # get all .svg files generated from the .xopp file
             file_names = [f[:-4] for f in glob.glob(f"{file_name}*.svg")]
 
-            # covert the .svg files to .png, cropping them in the process
+            # covert the .svg files to .pdf, cropping them in the process
             for file_name in file_names:
                 print("- cropping SVG...")
                 crop_svg_file(f"{file_name}.svg")
 
-                print(f"- converting {file_name}.svg to PNG...")
-                svg_to_png(f"{file_name}.svg", f"{file_name}.png")
+                print(f"- converting {file_name}.svg to PDF...")
+                svg_to_pdf(f"{file_name}.svg", f"{file_name}.pdf")
 
-                generated_files += [f"{file_name}.svg", f"{file_name}.png"]
+                generated_files += [f"{file_name}.svg", f"{file_name}.pdf"]
 
-            # replace the links to the .xopp files to the .png images
+            # replace the links to the .xopp files to the .pdf images
             contents = contents.replace(
                 match.group(0),
                 "\n\n".join(
-                    [f"![{file_label}]({file_name}.png)" for file_name in file_names]
+                    [f"![{file_label}]({file_name}.pdf)" for file_name in file_names]
                 ),
             )
 
