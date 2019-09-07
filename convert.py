@@ -172,10 +172,10 @@ generated_files = []
 
 # go through the specified markdown files
 for md_file_name in arguments.files:
-    print_message(f"Processing {md_file_name}:")
 
     # read the md file
     with open(md_file_name, "r") as f:
+        print_message(f"Reading {md_file_name}:")
         contents = f.read()
 
         # find each of the .xopp files in the .md file
@@ -183,6 +183,7 @@ for md_file_name in arguments.files:
             file_label, file_name = match.groups()
 
             # convert the .xopp file to .svg file(s)
+            print_message(f"- converting {file_name}.xopp to SVG...")
             xopp_to_svg(f"{file_name}.xopp", f"{file_name}.svg")
 
             # get all .svg files generated from the .xopp file
@@ -213,7 +214,7 @@ for md_file_name in arguments.files:
     with open(dummy_file_name, "w") as f:
         f.write(contents)
 
-    # covnert the .md file to .pdf
+    # convert the .md file to .pdf
     md_to_pdf(dummy_file_name, md_file_name[:-2] + "pdf")
 
     generated_files += [dummy_file_name]
