@@ -5,12 +5,9 @@ import random  # generating random strings for cache
 import argparse  # command line interaction
 
 
-def run_shell_command(command, silent=True):
-    """Run a shell command."""
-    if silent:
-        call(command, stderr=DEVNULL, stdout=DEVNULL)
-    else:
-        call(command)
+def run_shell_command(command):
+    """Run a shell command without any output to the command line."""
+    call(command, stderr=DEVNULL, stdout=DEVNULL)
 
 
 def generate_random_hex_number(length):
