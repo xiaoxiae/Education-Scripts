@@ -46,56 +46,57 @@ def md_to_pdf(input_file, output_file):
     )
 
 
-def crop_svg_file(file_name, margin=15):
-    """Crop the specified .svg file."""
-    # for setting default values of the coordinates of the points of the svg
-    inf = float("inf")
+def crop_svg_file(file_name, margin=0):
+    """Crop the specified .svg file.
+    TODO: add support for cropping files that include text."""
 
     with open(file_name, "r") as svg_file:
-        # set the default values
-        min_x, min_y, max_x, max_y = inf, inf, -inf, -inf
         contents = svg_file.read()
 
-        # regex to find points of the paths of the svg file objects
-        regex = compile(
-            r'<path(.*?)d="M ([0-9.]+) ([0-9.]+) L ([0-9.]+) ([0-9.]+) "(.*?)\/>',
-            MULTILINE,
-        )
+        # set the default values for the coordinates we're trying to find
+        inf = float("inf")
+        min_x, min_y, max_x, max_y = inf, inf, -inf, -inf
 
-        # find all the x and y coordinates
-        for match in regex.finditer(contents):
-            x1, y1, x2, y2 = map(float, match.groups()[1:-1])
+        # find all paths and their respective descriptions
+        paths = compile(r'<path(.+?)d="(.+?)"', MULTILINE).finditer(contents)
+        next(paths)  # skip the first one, which is always a solid color background
 
-            # check for min/max coordinates
-            min_x, max_x = min(min_x, x1, x2), max(max_x, x1, x2)
-            min_y, max_y = min(min_y, y1, y2), max(max_y, y1, y2)
+        for path in paths:
+            coordinate_parts = path.group(2).strip().split(" ")
+            m_count, l_count = coordinate_parts.count("M"), coordinate_parts.count("L")
 
-        # increase the margins
+            # ignore the paper grid coordinates (alternating m/l commands) and don't
+            # ignore pen strokes (since they're one m and one l command)
+            if m_count == l_count and m_count + l_count > 2:
+                continue
+
+            # get only the coordinate numbers
+            coordinates = [float(c) for c in coordinate_parts if not c.isalpha()]
+
+            # check for min/max
+            for x, y in zip(coordinates[::2], coordinates[1::2]):
+                min_x, max_x = min(min_x, x), max(max_x, x)
+                min_y, max_y = min(min_y, y), max(max_y, y)
+
+        # adjust for margins
         min_x -= margin
         min_y -= margin
         max_x += margin
         max_y += margin
 
-        # replace width and height of the svg file
-        contents = sub(
-            r'<svg(.*)width="(.+?)pt',
-            f'<svg\\1width="{max_x - min_x}pt',
-            sub(
-                r'<svg(.*)height="(.+?)pt',
-                f'<svg\\1height="{max_y - min_y}pt',
-                contents,
-            ),
+        # add/update svg values
+        substitutions = (
+            (r'<svg(.*)width="(.+?)pt', f'<svg\\1width="{max_x - min_x}pt'),  # width
+            (r'<svg(.*)height="(.+?)pt', f'<svg\\1height="{max_y - min_y}pt'),  # height
+            (r"<svg(.+)>", f'<svg\\1 x="{min_x}" y="{min_y}">'),  # min x and y
+            (
+                r'<svg(.*)viewBox="(.*?)"(.*)>',
+                f'<svg\\1viewBox="{min_x} {min_y} {max_x - min_x} {max_y - min_y}"\\3>',
+            ),  # viewbox
         )
 
-        # append minimum x and y
-        contents = sub(r"<svg(.+)>", f'<svg\\1 x="{min_x}" y="{min_y}">', contents)
-
-        # change viewbox
-        contents = sub(
-            r'<svg(.*)viewBox="(.*?)"(.*)>',
-            f'<svg\\1viewBox="{min_x} {min_y} {max_x - min_x} {max_y - min_y}"\\3>',
-            contents,
-        )
+        for pattern, replacement in substitutions:
+            contents = sub(pattern, replacement, contents)
 
     # overwrite the file
     with open(file_name, "w") as svg_file:
