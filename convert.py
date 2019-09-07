@@ -130,7 +130,18 @@ def get_argument_parser():
         "--silent",
         dest="silent",
         action="store_true",
-        help="prevent the script from sending any messages",
+        help="prevent the script from outputting any messages",
+    )
+
+    # svg margins
+    parser.add_argument(
+        "-m",
+        "--margins",
+        dest="margins",
+        metavar="M",
+        type=int,
+        default=15,
+        help="set the margins around the cropped Xournal++ files (in points, default 15)",
     )
 
     # require files
@@ -180,7 +191,7 @@ for md_file_name in arguments.files:
             # covert the .svg files to .pdf, cropping them in the process
             for file_name in file_names:
                 print_message("- cropping SVG...")
-                crop_svg_file(f"{file_name}.svg")
+                crop_svg_file(f"{file_name}.svg", arguments.margins)
 
                 print_message(f"- converting {file_name}.svg to PDF...")
                 svg_to_pdf(f"{file_name}.svg", f"{file_name}.pdf")
