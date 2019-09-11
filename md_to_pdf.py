@@ -5,30 +5,30 @@ import random  # generating random strings for cache
 import argparse  # command line interaction
 
 
-def run_shell_command(command):
+def run_shell_command(command: [str]):
     """Run a shell command without any output to the command line."""
     call(command, stderr=DEVNULL, stdout=DEVNULL)
 
 
-def generate_random_hex_number(length):
+def generate_random_hex_number(length: int):
     """Generates a random hexadecimal number (with possible leading zeroes!) of the
     specified length."""
     return "".join(random.choice("0123456789abcdef") for _ in range(length))
 
 
-def xopp_to_svg(input_file, output_file):
+def xopp_to_svg(input_file: str, output_file: str):
     """Convert a .xopp file to a .svg file using Xournal++."""
     run_shell_command(["xournalpp", f"--create-img={output_file}", input_file])
 
 
-def svg_to_pdf(input_file, output_file):
+def svg_to_pdf(input_file: str, output_file: str):
     """Convert a .svg file to a .pdf file using InkScape."""
     run_shell_command(
         ["inkscape", "-C", "-z", f"--file={input_file}", f"--export-pdf={output_file}"]
     )
 
 
-def md_to_pdf(input_file, output_file, template=None):
+def md_to_pdf(input_file: str, output_file: str, template: str = None):
     """Convert a .md file to a .pdf file using Pandoc."""
     command = ["pandoc", input_file, "-o", output_file, "--listings"]
 
@@ -39,7 +39,7 @@ def md_to_pdf(input_file, output_file, template=None):
     run_shell_command(command)
 
 
-def crop_svg_file(file_name, margin=0):
+def crop_svg_file(file_name: str, margin: float = 0):
     """Crop the specified .svg file.
     TODO: add support for cropping files that include text."""
 
@@ -96,7 +96,7 @@ def crop_svg_file(file_name, margin=0):
         svg_file.write(contents)
 
 
-def delete_files(files):
+def delete_files(files: [str]):
     """Deletes all of the files specified in the list."""
     for f in files:
         os.remove(f)
