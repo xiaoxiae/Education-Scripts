@@ -28,15 +28,9 @@ def svg_to_pdf(input_file: str, output_file: str):
     )
 
 
-def md_to_pdf(input_file: str, output_file: str, template: str = None):
+def md_to_pdf(input_file: str, output_file: str, parameters: [str]):
     """Convert a .md file to a .pdf file using Pandoc."""
-    command = ["pandoc", input_file, "-o", output_file, "--listings"]
-
-    # possibly specify a template
-    if template is not None:
-        command += ["--template", template]
-
-    run_shell_command(command)
+    run_shell_command(["pandoc", input_file, "-o", output_file, *parameters])
 
 
 def crop_svg_file(file_name: str, margin: float = 0):
@@ -137,14 +131,14 @@ def get_argument_parser():
         help="set the margins around the cropped Xournal++ files (in points, default 15)",
     )
 
-    # svg margins
+    # pandoc parameters
     parser.add_argument(
-        "-t",
-        "--template",
-        dest="template",
-        metavar="T",
-        default=None,
-        help="specify the name of the Pandoc template to use for the conversion (no default)",
+        "-p",
+        "--pandoc-parameters",
+        dest="pandoc_parameters",
+        metavar="P",
+        nargs=argparse.REMAINDER,
+        help="specify pandoc parameter(s) used in the conversion",
     )
 
     # require files
@@ -218,7 +212,7 @@ for md_file_name in arguments.files:
         f.write(contents)
 
     # convert the .md file to .pdf
-    md_to_pdf(dummy_file_name, md_file_name[:-2] + "pdf", arguments.template)
+    md_to_pdf(dummy_file_name, md_file_name[:-2] + "pdf", arguments.pandoc_parameters)
 
     generated_files += [dummy_file_name]
 
