@@ -1,1 +1,6 @@
+# Python cache files
 __pycache__/
+
+# Binary files
+*.xopp
+*.pdf
