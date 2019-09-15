@@ -137,6 +137,7 @@ def get_argument_parser():
         "--pandoc-parameters",
         dest="pandoc_parameters",
         metavar="P",
+        default=[],
         nargs=argparse.REMAINDER,
         help="specify pandoc parameter(s) used in the conversion",
     )
