@@ -161,13 +161,28 @@ def get_argument_parser():
         help="specify pandoc parameter(s) used in the conversion",
     )
 
-    # require files
-    parser.add_argument(
-        "files",
-        metavar="file",
-        type=str,
+    group = parser.add_mutually_exclusive_group(required=True)
+
+    # all .md files
+    group.add_argument(
+        "-a",
+        "--all-files",
+        dest="files",
+        default=[],
+        action="store_const",
+        const=glob.glob("*.md"),
+        help="convert all Markdown files in the current directory",
+    )
+
+    # only specific files
+    group.add_argument(
+        "-f",
+        "--files",
+        dest="files",
+        default=[],
+        metavar="F",
         nargs="+",
-        help="the name(s) of the markdown files to be converted to pdf",
+        help="the name(s) of the markdown file(s) to be converted to pdf",
     )
 
     return parser
