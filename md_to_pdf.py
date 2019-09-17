@@ -1,13 +1,20 @@
 import os, shutil, glob  # folder + path utilities
-from subprocess import call, DEVNULL  # executing shell commands
+from subprocess import Popen, PIPE  # executing shell commands
 from re import sub, compile, MULTILINE  # for cropping
 import random  # generating random strings for cache
 import argparse  # command line interaction
 
 
-def run_shell_command(command: [str]):
-    """Run a shell command without any output to the command line."""
-    call(command, stderr=DEVNULL, stdout=DEVNULL)
+def run_shell_command(command: [str], ignore_errors=False):
+    """Run a shell command. If stderr is not empty, the function will terminate the
+    script (unless specified otherwise) and print the error message."""
+    _, stderr = map(
+        lambda b: b.decode("utf-8").strip(),
+        Popen(command, stdout=PIPE, stderr=PIPE).communicate(),
+    )
+
+    if not ignore_errors and stderr != "":
+        exit(f"\n{command[0].capitalize()} error:\n| " + stderr.replace("\n", "\n| "))
 
 
 def generate_random_hex_number(length: int):
@@ -17,8 +24,11 @@ def generate_random_hex_number(length: int):
 
 
 def xopp_to_svg(input_file: str, output_file: str):
-    """Convert a .xopp file to a .svg file using Xournal++."""
-    run_shell_command(["xournalpp", f"--create-img={output_file}", input_file])
+    """Convert a .xopp file to a .svg file using Xournal++. Note that xournalpp errors
+    are ignored by default, since stderr produces warnings."""
+    run_shell_command(
+        ["xournalpp", f"--create-img={output_file}", input_file], ignore_errors=True
+    )
 
 
 def svg_to_pdf(input_file: str, output_file: str):
