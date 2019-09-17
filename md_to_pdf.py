@@ -109,7 +109,16 @@ def delete_files(files: [str]):
 def get_argument_parser():
     """Returns the ArgumentParser object for the script."""
     parser = argparse.ArgumentParser(
-        description="Convert markdown files with embedded Xournal++ files to pdf."
+        description="Convert markdown files with embedded Xournal++ files to pdf.",
+        epilog="\n  ".join(
+            [
+                "examples:",
+                "py md_to_pdf.py -a                               | convert all .md files",
+                "py md_to_pdf.py -s -f README.md                  | silently convert README.md",
+                "py md_to_pdf.py -a -p='--template=eisvogel.tex'  | convert all .md files using a pandoc template",
+            ]
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
     )
 
     # clean-up after the script
