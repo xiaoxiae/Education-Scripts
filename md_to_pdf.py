@@ -17,7 +17,7 @@ def run_shell_command(command: [str], ignore_errors=False):
         exit(f"\n{command[0].capitalize()} error:\n| " + stderr.replace("\n", "\n| "))
 
 
-def generate_random_hex_number(length: int):
+def generate_random_hex_number(length: int) -> str:
     """Generates a random hexadecimal number (with possible leading zeroes!) of the
     specified length."""
     return "".join(random.choice("0123456789abcdef") for _ in range(length))
@@ -100,12 +100,6 @@ def crop_svg_file(file_name: str, margin: float = 0):
         svg_file.write(contents)
 
 
-def delete_files(files: [str]):
-    """Deletes all of the files specified in the list."""
-    for f in files:
-        os.remove(f)
-
-
 def get_argument_parser():
     """Returns the ArgumentParser object for the script."""
     parser = argparse.ArgumentParser(
@@ -115,7 +109,7 @@ def get_argument_parser():
                 "examples:",
                 "py md_to_pdf.py -a                               | convert all .md files",
                 "py md_to_pdf.py -s -f README.md                  | silently convert README.md",
-                "py md_to_pdf.py -a -p='--template=eisvogel.tex'  | convert all .md files using a pandoc template",
+                "py md_to_pdf.py -a -p='--template=eisvogel.tex'  | use a pandoc template",
             ]
         ),
         formatter_class=argparse.RawTextHelpFormatter,
@@ -170,6 +164,7 @@ def get_argument_parser():
         help="specify pandoc parameter(s) used in the conversion",
     )
 
+    # either convert all files, only specific files or use a template
     group = parser.add_mutually_exclusive_group(required=True)
 
     # all .md files
@@ -191,15 +186,14 @@ def get_argument_parser():
         default=[],
         metavar="F",
         nargs="+",
-        help="the name(s) of the markdown file(s) to be converted to pdf",
+        help="the name(s) of the markdown file(s) to convert to pdf",
     )
 
     return parser
 
 
 # get the parser and parse the commands
-parser = get_argument_parser()
-arguments = parser.parse_args()
+arguments = get_argument_parser().parse_args()
 
 
 def print_message(*args):
@@ -271,6 +265,8 @@ for md_file_name in arguments.files:
 # clean-up after the script is done
 if arguments.cleanup:
     print_message("Cleaning up...")
-    delete_files(generated_files)
+
+    for f in generated_files:
+        os.remove(f)
 
 print_message("Done!\n")
