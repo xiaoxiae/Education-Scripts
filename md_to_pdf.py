@@ -112,7 +112,7 @@ def get_argument_parser():
                 "py md_to_pdf.py -a -p='--template=eisvogel.tex'  | use a pandoc template",
             ]
         ),
-        formatter_class=argparse.RawTextHelpFormatter,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     # clean-up after the script
