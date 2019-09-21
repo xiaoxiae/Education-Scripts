@@ -269,4 +269,4 @@ if arguments.cleanup:
     for f in generated_files:
         os.remove(f)
 
-print_message("Done!\n")
+print_message("Done!")
