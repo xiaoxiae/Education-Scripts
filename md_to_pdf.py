@@ -2,7 +2,7 @@ import os, shutil, glob  # folder + path utilities
 from subprocess import Popen, PIPE  # executing shell commands
 from re import sub, compile, MULTILINE  # for cropping
 import random  # generating random strings for cache
-import argparse  # command line interaction
+import argparse, shlex, sys  # command line interaction
 
 
 def run_shell_command(command: [str], ignore_errors=False):
@@ -164,6 +164,18 @@ def get_argument_parser():
         help="specify pandoc parameter(s) used in the conversion",
     )
 
+    # use a script template
+    parser.add_argument(
+        "-t",
+        "--template",
+        dest="template",
+        metavar="T",
+        nargs="?",
+        default="",
+        help="use a pre-made template found in md_to_pdf.templates; if the flag is"
+        + "used and no template is specified, the first one is used",
+    )
+
     # either convert all files, only specific files or use a template
     group = parser.add_mutually_exclusive_group(required=True)
 
@@ -192,14 +204,93 @@ def get_argument_parser():
     return parser
 
 
+def throw_parsing_error(reason: str, line: str = "", line_num: int = -1, pos: int = -1):
+    """Returns a formatted string describing the error that occurred during the parsing
+    of the template file."""
+    # if the position of the error on a line is not specified, print only the reason
+    if line == "" or line_num == -1 or pos == -1:
+        exit(f"Error parsing template file: {reason}.")
+    else:
+        # for measuring where to put the ^
+        error_line = f"| line {line_num}: "
+
+        exit(
+            "\n".join(
+                (
+                    f"Error parsing template file: {reason}.",
+                    error_line + line,
+                    "|" + " " * (len(error_line) - 1 + pos) + "^",
+                )
+            )
+        )
+
+
+def skip_whitespace(reason: str, line: str, line_num: int, pos: int):
+    """Return the index of the first non-whitespace character in a string, or throw a
+    parsing error with the specified reason if none was found."""
+    for pos in range(pos, len(line)):
+        if not line[pos] in {" ", "\t"}:
+            return pos
+    else:
+        throw_parsing_error(reason, line, line_num, pos)
+
+
 # get the parser and parse the commands
-arguments = get_argument_parser().parse_args()
+parser = get_argument_parser()
+arguments = parser.parse_args()
 
 
 def print_message(*args):
     """A print() wrapper that does nothing when the silent argument is specified."""
     if not arguments.silent:
         print(*args)
+
+
+# if the template flag was used, parse the additional arguments from the template file
+if arguments.template is not "":
+    with open(f"{__file__[:-3]}.templates", "r") as f:
+        for n, line in enumerate(map(lambda s: s.strip(), f.read().splitlines())):
+            # ignore comments
+            if line[0] == "#":
+                continue
+
+            template_names = []
+            parameters = ""
+
+            i = 0
+            while i < len(line):
+                # parse the template name
+                for j in range(i, len(line)):
+                    if not (line[j].isalnum() or line[j] in {"_", "-"}):
+                        break
+                else:
+                    throw_parsing_error("missing parameters", line, n, j)
+
+                # if no name was read, an invalid character is present in the name
+                if i == j:
+                    throw_parsing_error("invalid template name character", line, n, i)
+                else:
+                    template_names.append(line[i:j])
+
+                # should find either , or :, since we just read a template name
+                i = skip_whitespace("expected , or :", line, n, j)
+
+                if line[i] == ",":
+                    i = skip_whitespace("missing template name", line, n, i + 1)
+                    continue
+                elif line[i] == ":":
+                    i = skip_whitespace("missing template parameters", line, n, i + 1)
+
+                    parameters = shlex.split(line[i:])
+                    break
+
+            # parse first template if none was specified, or the matching one
+            if arguments.template == None or arguments.template in template_names:
+                arguments = parser.parse_args(sys.argv[1:] + parameters)
+                break
+        else:
+            # if no template matched the name, throw an error
+            throw_parsing_error(f"template '{arguments.template}' not found")
 
 
 # make note of the generated files to remove them after the conversions

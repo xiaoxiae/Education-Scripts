@@ -1,0 +1,2 @@
+# the default template
+d, default: -p --template=eisvogel.tex --listings
