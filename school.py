@@ -201,12 +201,13 @@ def open_course(folder: str, argument: str = None) -> None:
 
 def compile_notes(folder: str) -> None:
     """Run md_to_pdf script on all of the courses."""
-    # recursively find all folders with an info.yaml file
-    for root, _, filenames in os.walk(folder):
+    base = os.path.dirname(os.path.realpath(__file__))
+
+    for root, _, filenames in list(os.walk(folder)):
         for filename in filenames:
             if filename == "info.yaml":
-                print(root)
                 # call the md_to_pdf Python script (defined as a Fish function)
+                os.chdir(os.path.join(base, root))
                 subprocess.call(["fish", "-c", "md_to_pdf -a -t"])
 
 
