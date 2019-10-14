@@ -109,18 +109,32 @@ def list_homework(folder: str) -> None:
 def list_courses(folder: str, option="") -> None:
     """List information about the courses."""
     courses = get_sorted_courses(folder)
-    current_day = datetime.datetime.today().weekday()
+
+    current_day = datetime.datetime.today()
+    current_weekday = current_day.weekday()
 
     table = []
     for i, course in enumerate(courses):
-        course_day = day_index(course["time"]["day"])
+        course_weekday = day_index(course["time"]["day"])
 
-        if prefix_length("today", option) == 0 or current_day == course_day:
+        if (
+            (option == "td" and current_weekday == course_weekday)
+            or (option == "tm" and (current_weekday + 1) % 7 == course_weekday)
+            or option == ""
+        ):
             # include the name of the day before first day's course
             if courses[i - 1]["time"]["day"] != courses[i]["time"]["day"]:
-                next_course_day = current_day
+                # calculate the date of the next occurrence of this weekday
+                weekday_date = current_day + datetime.timedelta(
+                    days=(course_weekday - current_weekday) % 7
+                )
 
-                table.append([weekday_to_cz(courses[i]["time"]["day"]).capitalize()])
+                table.append(
+                    [
+                        f"| {weekday_to_cz(courses[i]['time']['day']).capitalize()}"
+                        + f" {weekday_date.strftime('%e. %m.')} |"
+                    ]
+                )
 
             # append useful information
             table.append(
@@ -135,7 +149,7 @@ def list_courses(folder: str, option="") -> None:
 
     # if no courses were added since the days didn't match
     if len(table) == 0:
-        print("No courses today!")
+        print("No courses matching the criteria found!")
         sys.exit()
 
     column_widths = [0] * max(len(row) for row in table)
