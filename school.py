@@ -39,7 +39,7 @@ def prefix_length(s1: str, s2: str) -> int:
 
 def minutes_to_HHMM(minutes: int) -> str:
     """Convert a number of minutes to a string in the form HH:MM."""
-    return f"{minutes // 60}:{minutes % 60:02d}"
+    return f"{str(minutes // 60).rjust(2)}:{minutes % 60:02d}"
 
 
 def weekday_to_cz(day: str) -> str:
@@ -131,8 +131,7 @@ def list_courses(folder: str, option="") -> None:
 
                 table.append(
                     [
-                        f"| {weekday_to_cz(courses[i]['time']['day']).capitalize()}"
-                        + f" {weekday_date.strftime('%e. %m.')} |"
+                        f"{weekday_to_cz(courses[i]['time']['day']).capitalize()} / {weekday_date.strftime('%e. %m.')}"
                     ]
                 )
 
@@ -147,14 +146,13 @@ def list_courses(folder: str, option="") -> None:
                 ]
             )
 
-    # if no courses were added since the days didn't match
+    # if no courses were added since the days didn't match, exit with a message
     if len(table) == 0:
         print("No courses matching the criteria found!")
         sys.exit()
 
-    column_widths = [0] * max(len(row) for row in table)
-
     # find max width of each of the columns of the table
+    column_widths = [0] * max(len(row) for row in table)
     for row in table:
         # skip weekday rows
         if len(row) != 1:
@@ -162,24 +160,28 @@ def list_courses(folder: str, option="") -> None:
                 if column_widths[i] < len(entry):
                     column_widths[i] = len(entry)
 
-    # print the columns
     for i, row in enumerate(table):
-        print(end="| ")
-        max_row_width = sum(column_widths) + 3 * (len(column_widths) - 1)
+        print(end="╭─" if i == 0 else "│ ")
 
-        # if only one item is in the row, it's the weekday
+        column_sep = " │ "
+        max_row_width = sum(column_widths) + len(column_sep) * (len(column_widths) - 1)
+
+        # if only one item is in the row, it's the weekday and is printed specially
         if len(row) == 1:
-            # don't skip a line when the entry is the very first one
-            if i != 0:
-                print(" " * max_row_width, end=" |\n| ")
-
-            print(row[0].center(max_row_width, "_"), end=" |")
+            print(
+                (f"{' ' * max_row_width} │\n├─" if i != 0 else "")
+                + f"◀ {row[0]} ▶".center(max_row_width, "─")
+                + ("─╮" if i == 0 else "─┤")
+            )
         else:
-            for i, entry in enumerate(row):
-                print(entry.ljust(column_widths[i]), end=" | ")
-        print()
+            for j, entry in enumerate(row):
+                print(
+                    entry.ljust(column_widths[j])
+                    + (column_sep if j != (len(row) - 1) else " │\n"),
+                    end="",
+                )
 
-    print("| " + "-" * max_row_width, end=" |\n")
+    print(f"╰{'─' * (max_row_width + 2)}╯")
 
 
 def open_course(folder: str, argument: str = None) -> None:
