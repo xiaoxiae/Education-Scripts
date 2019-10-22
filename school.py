@@ -4,11 +4,36 @@ import yaml
 import subprocess
 import datetime
 import signal
+from typing import Union
 
 
 def get_cron_schedule(time: int, day: int) -> str:
     """Returns the cron schedule expression for the specified parameters."""
     return f"{time % 60} {time // 60} * * {day + 1}"  # day + 1, since 0 == Sunday
+
+
+def get_current_course(folder: str) -> Union[dict, None]:
+    """Returns the data of the course scheduled for the current time, else None."""
+    today = datetime.datetime.today()
+    weekday = today.weekday()
+    current_minutes = today.hour * 60 + today.minute
+
+    for course in get_sorted_courses(folder):
+        course_weekday = day_index(course["time"]["day"])
+        course_start, course_end = course["time"]["start"], course["time"]["end"]
+
+        if weekday == course_weekday and course_start <= current_minutes <= course_end:
+            return course
+    else:
+        return None
+
+
+def open_in_ranger(root: str, course: dict, ignore_type: bool = False) -> None:
+    """Open the specified course in Ranger. Possibly ignore its type (c/p)."""
+    if ignore_type:
+        subprocess.call(["ranger", os.path.join(root, course["name"])])
+    else:
+        subprocess.call(["ranger", os.path.join(root, course["name"], course["type"])])
 
 
 def get_next_course_message(i: int, courses: list) -> str:
@@ -185,34 +210,30 @@ def list_courses(folder: str, option="") -> None:
 
 
 def open_course(folder: str, argument: str = None) -> None:
-    """Open the specified course in Ranger."""
+    """Open the specified course in Ranger, or the current one."""
     if argument == None:
-        current_date = datetime.datetime.today()
+        # try to open the current course folder
+        current_course = get_current_course(folder)
 
-        current_day = current_date.weekday()
-        current_minutes = current_date.hour * 60 + current_date.minute
+        if current_course != None:
+            open_in_ranger(folder, current_course)
+        else:
+            print(f"No currently ongoing course!")
     else:
-        parts = argument.split("-")  # the argument from the command line
+        parts = argument.split("-")
 
-        course_identifier = parts[0].lower()
-        course_type = None if len(parts) <= 1 else parts[1].lower()
+        course_identifier = parts[0].lower()  # either full name or abbr
+        course_type = None if len(parts) == 1 else parts[1].lower()  # c/p
 
-    for course in get_sorted_courses(folder):
-        # information about the current course
-        name, abbr = course["name"].lower(), course["abbreviation"].lower()
-        weekday, minutes = course["name"].lower(), course["abbreviation"].lower()
-        path = os.path.join(folder, course["name"])
+        for course in get_sorted_courses(folder):
+            name, abbr = course["name"].lower(), course["abbreviation"].lower()
 
-        if course_identifier == name or course_identifier == abbr:
-            if course_type is None:
-                subprocess.call(["ranger", path])
+            # either open the course if the time matches, or open the specified one
+            if course_identifier == name or course_identifier == abbr:
+                open_in_ranger(folder, course, ignore_type=True)
                 break
-            elif course_type == course["type"][0]:
-                subprocess.call(["ranger", os.path.join(path, course["type"])])
-                break
-
-    else:
-        print(f"Course with the identifier '{argument}' not found.")
+        else:
+            print(f"Course with the identifier {course_identifier} not found.")
 
 
 def compile_notes(folder: str) -> None:
