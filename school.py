@@ -1,9 +1,9 @@
 import sys
 import os
-import yaml
-import subprocess
-import datetime
-import signal
+from yaml import safe_load, YAMLError
+from subprocess import call
+from datetime import timedelta, datetime
+from signal import signal, SIGINT
 from typing import Union
 
 
@@ -14,7 +14,7 @@ def get_cron_schedule(time: int, day: int) -> str:
 
 def get_current_course(folder: str) -> Union[dict, None]:
     """Returns the data of the course scheduled for the current time, else None."""
-    today = datetime.datetime.today()
+    today = datetime.today()
     weekday = today.weekday()
     current_minutes = today.hour * 60 + today.minute
 
@@ -29,15 +29,15 @@ def get_current_course(folder: str) -> Union[dict, None]:
 
 
 def open_in_ranger(root: str, course: dict, ignore_type: bool = False) -> None:
-    """Open the specified course in Ranger. Possibly ignore its type (c/p)."""
+    """Opens the specified course in Ranger. Possibly ignore its type (cvič./předn.)."""
     if ignore_type:
-        subprocess.call(["ranger", os.path.join(root, course["name"])])
+        call(["ranger", os.path.join(root, course["name"])])
     else:
-        subprocess.call(["ranger", os.path.join(root, course["name"], course["type"])])
+        call(["ranger", os.path.join(root, course["name"], course["type"])])
 
 
 def get_next_course_message(i: int, courses: list) -> str:
-    """Return the string of the cron job that should be ran for the upcoming course."""
+    """Returns the string of the cron job that should be ran for the upcoming course."""
     next_course = (
         None
         if i + 1 >= len(courses)
@@ -58,17 +58,17 @@ def get_next_course_message(i: int, courses: list) -> str:
 
 
 def prefix_length(s1: str, s2: str) -> int:
-    """Return the length of the second string if it's a prefix of the first, else 0."""
+    """Returns the length of the second string if it's a prefix of the first, else 0."""
     return len(s2) if s2 == s1[: len(s2)] else 0
 
 
 def minutes_to_HHMM(minutes: int) -> str:
-    """Convert a number of minutes to a string in the form HH:MM."""
+    """Converts a number of minutes to a string in the form HH:MM."""
     return f"{str(minutes // 60).rjust(2)}:{minutes % 60:02d}"
 
 
 def weekday_to_cz(day: str) -> str:
-    """Convert a day in English to a day in Czech"""
+    """Converts a day in English to a day in Czech"""
     return {
         "monday": "pondělí",
         "tuesday": "úterý",
@@ -81,7 +81,7 @@ def weekday_to_cz(day: str) -> str:
 
 
 def day_index(day: str) -> int:
-    """Return the index of the day in a week."""
+    """Returns the index of the day in a week."""
     return [
         "monday",
         "tuesday",
@@ -94,7 +94,7 @@ def day_index(day: str) -> int:
 
 
 def get_sorted_courses(path: str) -> list:
-    """Return a list of dictionaries with the parsed courses."""
+    """Returns a list of dictionaries with the parsed courses."""
     courses = []
 
     for root, _, filenames in os.walk(path):
@@ -102,8 +102,8 @@ def get_sorted_courses(path: str) -> list:
             if filename.endswith(".yaml"):
                 with open(os.path.join(root, filename), "r") as f:
                     try:
-                        courses.append(yaml.safe_load(f))
-                    except yaml.YAMLError as e:
+                        courses.append(safe_load(f))
+                    except YAMLError as e:
                         print(f"Error parsing YAML: {e}")
 
     return sorted(
@@ -112,7 +112,7 @@ def get_sorted_courses(path: str) -> list:
 
 
 def list_homework(folder: str) -> None:
-    """List information about a course's homework."""
+    """Lists information about a course's homework."""
     output = []
     for course in filter(lambda x: "homework" in x, get_sorted_courses(folder)):
         output.append(f"{course['name']} ({course['type']}):")
@@ -120,7 +120,7 @@ def list_homework(folder: str) -> None:
         for homework in sorted(course["homework"], key=lambda x: tuple(x)):
             # not sure how to make this part better, but this is definitely not it
             date, desc = tuple(*homework.items())
-            today = datetime.datetime.today().date()
+            today = datetime.today().date()
 
             output.append(
                 f"- due in {(date - today).days} days: {desc} ({date:%d/%m/%Y})"
@@ -132,10 +132,10 @@ def list_homework(folder: str) -> None:
 
 
 def list_courses(folder: str, option="") -> None:
-    """List information about the courses."""
+    """Lists information about the courses."""
     courses = get_sorted_courses(folder)
 
-    current_day = datetime.datetime.today()
+    current_day = datetime.today()
     current_weekday = current_day.weekday()
 
     table = []
@@ -150,7 +150,7 @@ def list_courses(folder: str, option="") -> None:
             # include the name of the day before first day's course
             if courses[i - 1]["time"]["day"] != courses[i]["time"]["day"]:
                 # calculate the date of the next occurrence of this weekday
-                weekday_date = current_day + datetime.timedelta(
+                weekday_date = current_day + timedelta(
                     days=(course_weekday - current_weekday) % 7
                 )
 
@@ -210,7 +210,7 @@ def list_courses(folder: str, option="") -> None:
 
 
 def open_course(folder: str, argument: str = None) -> None:
-    """Open the specified course in Ranger, or the current one."""
+    """Opens the specified course in Ranger, or the current one."""
     if argument == None:
         # try to open the current course folder
         current_course = get_current_course(folder)
@@ -237,7 +237,7 @@ def open_course(folder: str, argument: str = None) -> None:
 
 
 def compile_notes(folder: str) -> None:
-    """Run md_to_pdf script on all of the courses."""
+    """Runs md_to_pdf script on all of the courses."""
     base = os.path.dirname(os.path.realpath(__file__))
 
     for root, _, filenames in list(os.walk(folder)):
@@ -245,11 +245,11 @@ def compile_notes(folder: str) -> None:
             if filename == "info.yaml":
                 # call the md_to_pdf Python script (defined as a Fish function)
                 os.chdir(os.path.join(base, root))
-                subprocess.call(["fish", "-c", "md_to_pdf -a -t"])
+                call(["fish", "-c", "md_to_pdf -a -t"])
 
 
 def compile_cron_jobs(folder: str) -> None:
-    """Add notifications for upcoming classes to crontab file."""
+    """Adds notifications for upcoming classes to crontab file."""
     courses = get_sorted_courses(folder)
 
     cron_file = "/etc/crontab"
@@ -311,7 +311,7 @@ def compile_cron_jobs(folder: str) -> None:
 
 
 def list_recursive_help(tree: dict, indentation: int) -> None:
-    """Recursively pretty-print a nested dictionary (with lists being functions)."""
+    """Recursively pretty-prints a nested dictionary (with lists being functions)."""
     for decision in tree:
         if type(tree[decision]) != dict:
             print(
@@ -326,7 +326,7 @@ def list_recursive_help(tree: dict, indentation: int) -> None:
 # catch SIGINT and prevent it from terminating the script, since an instance of Ranger
 # might be running and it crashes when called using subprocess.Popen (might be related
 # to https://github.com/ranger/ranger/issues/898)
-signal.signal(signal.SIGINT, lambda _x, _y: None)
+signal(SIGINT, lambda _x, _y: None)
 
 # change path to current folder for the script to work
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
