@@ -7,33 +7,66 @@ from signal import signal, SIGINT
 from typing import Union
 
 
+# global variables
+courses_folder = "aktuální semestr/"
+
+
 def get_cron_schedule(time: int, day: int) -> str:
     """Returns the cron schedule expression for the specified parameters."""
     return f"{time % 60} {time // 60} * * {day + 1}"  # day + 1, since 0 == Sunday
 
 
-def get_current_course(folder: str) -> Union[dict, None]:
-    """Returns the data of the course scheduled for the current time, else None."""
+def get_ongoing_course() -> Union[dict, None]:
+    """Returns the currently ongoing course (or None)."""
     today = datetime.today()
-    weekday = today.weekday()
-    current_minutes = today.hour * 60 + today.minute
+    weekday, current_time = today.weekday(), today.hour * 60 + today.minute
 
-    for course in get_sorted_courses(folder):
+    for course in get_sorted_courses():
         course_weekday = day_index(course["time"]["day"])
         course_start, course_end = course["time"]["start"], course["time"]["end"]
 
-        if weekday == course_weekday and course_start <= current_minutes <= course_end:
+        if weekday == course_weekday and course_start <= current_time <= course_end:
             return course
     else:
         return None
 
 
-def open_in_ranger(root: str, course: dict, ignore_type: bool = False) -> None:
-    """Opens the specified course in Ranger. Possibly ignore its type (cvič./předn.)."""
+def get_course_from_argument(argument: str) -> list:
+    """Returns all courses that match the format name-[type] or abbreviation-[type]."""
+    courses = []
+
+    parts = argument.split("-")
+    course_identifier = parts[0].lower()
+    course_type = None if len(parts) == 1 else parts[1].lower()
+
+    for course in get_sorted_courses():
+        name, abbr = course["name"].lower(), course["abbreviation"].lower()
+
+        name_matches = course_identifier == name or course_identifier == abbr
+        type_matches = course_type == None or course_type == course["type"][0]
+
+        if name_matches and type_matches:
+            courses.append(course)
+
+    return courses
+
+
+def get_course_path(course: dict, ignore_type: bool = False):
+    """Returns the path of the specified course."""
     if ignore_type:
-        call(["ranger", os.path.join(root, course["name"])])
+        return os.path.join(courses_folder, course["name"])
     else:
-        call(["ranger", os.path.join(root, course["name"], course["type"])])
+        return os.path.join(courses_folder, course["name"], course["type"])
+
+
+def open_in_ranger(path: str) -> None:
+    """Opens the specified path in Ranger."""
+    call(["ranger", path])
+
+
+def open_in_firefox(url: str):
+    """Opens the specified website in FireFox."""
+    call(["firefox", "-new-window", url])
 
 
 def get_next_course_message(i: int, courses: list) -> str:
@@ -55,11 +88,6 @@ def get_next_course_message(i: int, courses: list) -> str:
             + f"({next_course['classroom']['floor']}. patro)."
         )
     )
-
-
-def prefix_length(s1: str, s2: str) -> int:
-    """Returns the length of the second string if it's a prefix of the first, else 0."""
-    return len(s2) if s2 == s1[: len(s2)] else 0
 
 
 def minutes_to_HHMM(minutes: int) -> str:
@@ -93,28 +121,29 @@ def day_index(day: str) -> int:
     ].index(day.lower())
 
 
-def get_sorted_courses(path: str) -> list:
+def get_sorted_courses(sort=False) -> list:
     """Returns a list of dictionaries with the parsed courses."""
     courses = []
 
-    for root, _, filenames in os.walk(path):
+    for root, _, filenames in os.walk(courses_folder):
         for filename in filenames:
             if filename.endswith(".yaml"):
                 with open(os.path.join(root, filename), "r") as f:
                     try:
                         courses.append(safe_load(f))
                     except YAMLError as e:
-                        print(f"Error parsing YAML: {e}")
+                        print(f"ERROR: {e}")
+                        sys.exit()
 
     return sorted(
-        courses, key=lambda x: (day_index(x["time"]["day"]), x["time"]["start"])
+        courses, key=lambda c: (day_index(c["time"]["day"]), c["time"]["start"])
     )
 
 
-def list_homework(folder: str) -> None:
+def list_homework() -> None:
     """Lists information about a course's homework."""
     output = []
-    for course in filter(lambda x: "homework" in x, get_sorted_courses(folder)):
+    for course in filter(lambda c: "homework" in c, get_sorted_courses()):
         output.append(f"{course['name']} ({course['type']}):")
 
         for homework in sorted(course["homework"], key=lambda x: tuple(x)):
@@ -131,9 +160,9 @@ def list_homework(folder: str) -> None:
     print("\n".join(output[:-1]))
 
 
-def list_courses(folder: str, option="") -> None:
+def list_courses(option="") -> None:
     """Lists information about the courses."""
-    courses = get_sorted_courses(folder)
+    courses = get_sorted_courses(sort=True)
 
     current_day = datetime.today()
     current_weekday = current_day.weekday()
@@ -143,7 +172,7 @@ def list_courses(folder: str, option="") -> None:
         course_weekday = day_index(course["time"]["day"])
 
         if (
-            (option == "td" and current_weekday == course_weekday)
+            (option == "t" and current_weekday == course_weekday)
             or (option == "tm" and (current_weekday + 1) % 7 == course_weekday)
             or option == ""
         ):
@@ -209,48 +238,64 @@ def list_courses(folder: str, option="") -> None:
     print(f"╰{'─' * (max_row_width + 2)}╯")
 
 
-def open_course(folder: str, argument: str = None) -> None:
+def open_course(argument: str = None) -> None:
     """Opens the specified course in Ranger, or the current one."""
     if argument == None:
-        # try to open the current course folder
-        current_course = get_current_course(folder)
+        current_course = get_ongoing_course()
 
         if current_course != None:
-            open_in_ranger(folder, current_course)
+            open_in_ranger(get_course_path(current_course))
         else:
-            print(f"No currently ongoing course!")
+            print(f"No currently ongoing course.")
     else:
-        parts = argument.split("-")
+        courses = get_course_from_argument(argument)
 
-        course_identifier = parts[0].lower()  # either full name or abbr
-        course_type = None if len(parts) == 1 else parts[1].lower()  # c/p
-
-        for course in get_sorted_courses(folder):
-            name, abbr = course["name"].lower(), course["abbreviation"].lower()
-
-            # either open the course if the time matches, or open the specified one
-            if course_identifier == name or course_identifier == abbr:
-                open_in_ranger(folder, course, ignore_type=True)
-                break
+        if len(courses) == 0:
+            print(f"Course with the identifier '{argument}' not found.")
+        elif len(courses) == 1:
+            open_in_ranger(get_course_path(courses[0]))
         else:
-            print(f"Course with the identifier {course_identifier} not found.")
+            open_in_ranger(get_course_path(courses[0], ignore_type=True))
 
 
-def compile_notes(folder: str) -> None:
+def open_website(argument: str = None) -> None:
+    """Opens the specified course's website in FireFox."""
+    if argument == None:
+        current_course = get_ongoing_course()
+
+        if current_course != None:
+            if "website" in current_course:
+                open_in_firefox(current_course["website"])
+            else:
+                print("The course has no website.")
+        else:
+            print(f"No currently ongoing course.")
+    else:
+        courses = get_course_from_argument(argument)
+
+        if len(courses) == 0:
+            print(f"Course with the identifier '{argument}' not found.")
+        elif len(courses) == 1:
+            if "website" in courses[0]:
+                open_in_firefox(courses[0]["website"])
+            else:
+                print("The course has no website.")
+        else:
+            print(f"Multiple courses matching the '{argument}' identifier.")
+
+
+def compile_notes() -> None:
     """Runs md_to_pdf script on all of the courses."""
     base = os.path.dirname(os.path.realpath(__file__))
 
-    for root, _, filenames in list(os.walk(folder)):
-        for filename in filenames:
-            if filename == "info.yaml":
-                # call the md_to_pdf Python script (defined as a Fish function)
-                os.chdir(os.path.join(base, root))
-                call(["fish", "-c", "md_to_pdf -a -t"])
+    for path in map(get_course_path, get_sorted_courses()):
+        os.chdir(os.path.join(base, path))
+        call(["fish", "-c", "md_to_pdf -a -t"])
 
 
-def compile_cron_jobs(folder: str) -> None:
+def compile_cron_jobs() -> None:
     """Adds notifications for upcoming classes to crontab file."""
-    courses = get_sorted_courses(folder)
+    courses = get_sorted_courses()
 
     cron_file = "/etc/crontab"
     user = os.getlogin()
@@ -324,21 +369,20 @@ def list_recursive_help(tree: dict, indentation: int) -> None:
 
 
 # catch SIGINT and prevent it from terminating the script, since an instance of Ranger
-# might be running and it crashes when called using subprocess.Popen (might be related
+# might be running and it crashes when called using subprocess. Popen (might be related
 # to https://github.com/ranger/ranger/issues/898)
 signal(SIGINT, lambda _x, _y: None)
 
 # change path to current folder for the script to work
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
-courses_folder = "aktuální semestr/"
-arguments = sys.argv[1:]
-
 decision_tree = {
     "list": {"courses": list_courses, "homework": list_homework},
     "compile": {"cron": compile_cron_jobs, "notes": compile_notes},
-    "open": open_course,
+    "open": {"course": open_course, "website": open_website},
 }
+
+arguments = sys.argv[1:]
 
 # if no arguments are specified, list help
 if len(arguments) == 0:
@@ -356,7 +400,10 @@ while len(arguments) != 0 and type(decision_tree) is dict:
     argument = arguments.pop(0)
 
     # sort the decisions by their common prefix with the argument
-    decisions = sorted((prefix_length(d, argument), d) for d in decision_tree)
+    decisions = sorted(
+        (len(argument) if argument == d[: len(argument)] else 0, d)
+        for d in decision_tree
+    )
 
     # if no match is found, quit with error
     if decisions[-1][0] == 0:
@@ -389,6 +436,6 @@ if type(decision_tree) == dict:
 
 # pass the courses folder and the rest of the arguments to the function
 if len(arguments) == 0:
-    decision_tree(courses_folder)
+    decision_tree()
 else:
-    decision_tree(courses_folder, *arguments)
+    decision_tree(*arguments)
