@@ -369,7 +369,7 @@ try:
 
         # convert the .md file to .pdf
         md_to_pdf(
-            dummy_file_name, f"{md_file_name[:-1]}.pdf", arguments.pandoc_parameters
+            dummy_file_name, f"{md_file_name[:-3]}.pdf", arguments.pandoc_parameters
         )
 
         print_message()
