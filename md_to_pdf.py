@@ -1,7 +1,7 @@
-import os, shutil, glob  # folder + path utilities
-from subprocess import Popen, PIPE  # executing shell commands
-from re import sub, compile, MULTILINE  # for cropping
-import random  # generating random strings for cache
+import os, glob
+from subprocess import Popen, PIPE  # shell commands
+from re import sub, compile, MULTILINE
+import random
 import argparse, shlex, sys  # command line interaction
 from typing import List
 
@@ -311,10 +311,14 @@ generated_files = []
 try:
     # go through the specified markdown files
     for md_file_name in arguments.files:
+        # get the name of the folder and the name of the file (for a status message)
+        folder, file_name = map(
+            os.path.basename, (os.path.split(os.path.abspath(md_file_name)))
+        )
 
-        # read the md file
+        # read the markdown file
         with open(md_file_name, "r") as f:
-            print_message(f"Reading {md_file_name}:")
+            print_message(f"Reading '{folder}{os.path.sep}{file_name}':")
             contents = f.read()
 
             if arguments.embed_xopp_files:
