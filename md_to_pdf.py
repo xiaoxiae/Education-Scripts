@@ -3,9 +3,16 @@ from subprocess import Popen, PIPE  # executing shell commands
 from re import sub, compile, MULTILINE  # for cropping
 import random  # generating random strings for cache
 import argparse, shlex, sys  # command line interaction
+from typing import List
 
 
-def run_shell_command(command: [str], ignore_errors=False):
+class CommandError(Exception):
+    """A custom exception that is raised when a system command returns a stderr."""
+
+    pass
+
+
+def run_shell_command(command: List[str], ignore_errors: bool = False) -> None:
     """Run a shell command. If stderr is not empty, the function will terminate the
     script (unless specified otherwise) and print the error message."""
     _, stderr = map(
@@ -13,8 +20,11 @@ def run_shell_command(command: [str], ignore_errors=False):
         Popen(command, stdout=PIPE, stderr=PIPE).communicate(),
     )
 
+    # possibly raise an exception
     if not ignore_errors and stderr != "":
-        exit(f"\n{command[0].capitalize()} error:\n| " + stderr.replace("\n", "\n| "))
+        raise CommandError(
+            f"\n{command[0].capitalize()} error:\n| " + stderr.replace("\n", "\n| ")
+        )
 
 
 def generate_random_hex_number(length: int) -> str:
@@ -23,7 +33,7 @@ def generate_random_hex_number(length: int) -> str:
     return "".join(random.choice("0123456789abcdef") for _ in range(length))
 
 
-def xopp_to_svg(input_file: str, output_file: str):
+def xopp_to_svg(input_file: str, output_file: str) -> None:
     """Convert a .xopp file to a .svg file using Xournal++. Note that xournalpp errors
     are ignored by default, since stderr produces warnings."""
     run_shell_command(
@@ -31,19 +41,19 @@ def xopp_to_svg(input_file: str, output_file: str):
     )
 
 
-def svg_to_pdf(input_file: str, output_file: str):
+def svg_to_pdf(input_file: str, output_file: str) -> None:
     """Convert a .svg file to a .pdf file using InkScape."""
     run_shell_command(
         ["inkscape", "-C", "-z", f"--file={input_file}", f"--export-pdf={output_file}"]
     )
 
 
-def md_to_pdf(input_file: str, output_file: str, parameters: [str]):
+def md_to_pdf(input_file: str, output_file: str, parameters: List[str]) -> None:
     """Convert a .md file to a .pdf file using Pandoc."""
     run_shell_command(["pandoc", input_file, "-o", output_file, *parameters])
 
 
-def crop_svg_file(file_name: str, margin: float = 0):
+def crop_svg_file(file_name: str, margin: float = 0) -> None:
     """Crop the specified .svg file.
     TODO: add support for cropping files that include text."""
 
@@ -100,7 +110,7 @@ def crop_svg_file(file_name: str, margin: float = 0):
         svg_file.write(contents)
 
 
-def get_argument_parser():
+def get_argument_parser() -> argparse.ArgumentParser:
     """Returns the ArgumentParser object for the script."""
     parser = argparse.ArgumentParser(
         description="Convert markdown files with embedded Xournal++ files to pdf.",
@@ -209,25 +219,27 @@ def throw_parsing_error(reason: str, line: str = "", line_num: int = -1, pos: in
     of the template file."""
     # if the position of the error on a line is not specified, print only the reason
     if line == "" or line_num == -1 or pos == -1:
-        exit(f"Error parsing template file: {reason}.")
+        print(f"Error parsing template file: {reason}.")
+        sys.exit()
     else:
         # for measuring where to put the ^
         error_line = f"| line {line_num}: "
 
-        exit(
+        print(
             "\n".join(
                 (
                     f"Error parsing template file: {reason}.",
                     error_line + line,
-                    "|" + " " * (len(error_line) - 1 + pos) + "^",
+                    f"|{' ' * (len(error_line) - 1 + pos)}^",
                 )
             )
         )
+        sys.exit()
 
 
 def skip_whitespace(reason: str, line: str, line_num: int, pos: int):
-    """Return the index of the first non-whitespace character in a string, or throw a
-    parsing error with the specified reason if none was found."""
+    """Return the index of the first non-whitespace character in a string, or exit with
+    a parsing error with the specified reason if none was found."""
     for pos in range(pos, len(line)):
         if not line[pos] in {" ", "\t"}:
             return pos
@@ -296,62 +308,71 @@ if arguments.template is not "":
 # make note of the generated files to remove them after the conversions
 generated_files = []
 
-# go through the specified markdown files
-for md_file_name in arguments.files:
+try:
+    # go through the specified markdown files
+    for md_file_name in arguments.files:
 
-    # read the md file
-    with open(md_file_name, "r") as f:
-        print_message(f"Reading {md_file_name}:")
-        contents = f.read()
+        # read the md file
+        with open(md_file_name, "r") as f:
+            print_message(f"Reading {md_file_name}:")
+            contents = f.read()
 
-        if arguments.embed_xopp_files:
-            # find each of the .xopp files in the .md file
-            for match in compile(r"\[(.*)]\((.+?).xopp\)", MULTILINE).finditer(
-                contents
-            ):
-                file_label, file_name = match.groups()
+            if arguments.embed_xopp_files:
+                # find each of the .xopp files in the .md file
+                for match in compile(r"\[(.*)]\((.+?).xopp\)", MULTILINE).finditer(
+                    contents
+                ):
+                    file_label, file_name = match.groups()
 
-                # convert the .xopp file to .svg file(s)
-                print_message(f"- converting {file_name}.xopp to SVG...")
-                xopp_to_svg(f"{file_name}.xopp", f"{file_name}.svg")
+                    # convert the .xopp file to .svg file(s)
+                    print_message(f"- converting {file_name}.xopp to SVG...")
+                    xopp_to_svg(f"{file_name}.xopp", f"{file_name}.svg")
 
-                # get all .svg files generated from the .xopp file
-                file_names = [f[:-4] for f in glob.glob(f"{file_name}*.svg")]
+                    # get all .svg files generated from the .xopp file
+                    file_names = [f[:-4] for f in glob.glob(f"{file_name}*.svg")]
 
-                # covert the .svg files to .pdf, cropping them in the process
-                for file_name in file_names:
-                    print_message("- cropping SVG...")
-                    crop_svg_file(f"{file_name}.svg", arguments.margins)
+                    # covert the .svg files to .pdf, cropping them in the process
+                    for file_name in file_names:
+                        # add the names first (to possibly be cleaned up later)
+                        generated_files += [f"{file_name}.svg", f"{file_name}.pdf"]
 
-                    print_message(f"- converting {file_name}.svg to PDF...")
-                    svg_to_pdf(f"{file_name}.svg", f"{file_name}.pdf")
+                        print_message("- cropping SVG...")
+                        crop_svg_file(f"{file_name}.svg", arguments.margins)
 
-                    generated_files += [f"{file_name}.svg", f"{file_name}.pdf"]
+                        print_message(f"- converting {file_name}.svg to PDF...")
+                        svg_to_pdf(f"{file_name}.svg", f"{file_name}.pdf")
 
-                # replace the links to the .xopp files to the .pdf images
-                contents = contents.replace(
-                    match.group(0),
-                    "\n\n".join(
-                        [
-                            f"![{file_label}]({file_name}.pdf)"
-                            for file_name in file_names
-                        ]
-                    ),
-                )
+                    # replace the links to the .xopp files to the .pdf images
+                    contents = contents.replace(
+                        match.group(0),
+                        "\n\n".join(
+                            [
+                                f"![{file_label}]({file_name}.pdf)"
+                                for file_name in file_names
+                            ]
+                        ),
+                    )
 
-    print_message("- generating resulting PDF...")
+        print_message("- generating resulting PDF...")
 
-    # create a dummy .md file for the conversion
-    dummy_file_name = generate_random_hex_number(10) + ".md"
-    with open(dummy_file_name, "w") as f:
-        f.write(contents)
+        # create a dummy .md file for the conversion
+        dummy_file_name = f"{generate_random_hex_number(10)}.md"
+        with open(dummy_file_name, "w") as f:
+            f.write(contents)
 
-    # convert the .md file to .pdf
-    md_to_pdf(dummy_file_name, md_file_name[:-2] + "pdf", arguments.pandoc_parameters)
+        # add the names first (to possibly be cleaned up later)
+        generated_files += [dummy_file_name]
 
-    generated_files += [dummy_file_name]
+        # convert the .md file to .pdf
+        md_to_pdf(
+            dummy_file_name, f"{md_file_name[:-1]}.pdf", arguments.pandoc_parameters
+        )
 
-    print_message()
+        print_message()
+
+except CommandError as e:
+    print(f"{e}\n")
+
 
 # clean-up after the script is done
 if arguments.cleanup:
