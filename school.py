@@ -16,16 +16,22 @@ def get_cron_schedule(time: int, day: int) -> str:
     return f"{time % 60} {time // 60} * * {day + 1}"  # day + 1, since 0 == Sunday
 
 
-def get_ongoing_course() -> Union[dict, None]:
-    """Returns the currently ongoing course (or None)."""
+def is_ongoing_course(course) -> bool:
+    """Returns True if the input course is ongoing, else False."""
     today = datetime.today()
     weekday, current_time = today.weekday(), today.hour * 60 + today.minute
 
-    for course in get_sorted_courses():
-        course_weekday = day_index(course["time"]["day"])
-        course_start, course_end = course["time"]["start"], course["time"]["end"]
+    course_weekday = day_index(course["time"]["day"])
+    course_start, course_end = course["time"]["start"], course["time"]["end"]
 
-        if weekday == course_weekday and course_start <= current_time <= course_end:
+    return weekday == course_weekday and course_start <= current_time <= course_end
+
+
+def get_ongoing_course() -> Union[dict, None]:
+    """Returns the currently ongoing course (or None)."""
+
+    for course in get_sorted_courses():
+        if is_ongoing_course(course):
             return course
     else:
         return None
@@ -189,10 +195,13 @@ def list_courses(option="") -> None:
                     ]
                 )
 
+            # for possibly surrounding the name with chars if it's the ongoing course
+            name_surround_char = "•" if is_ongoing_course(course) else ""
+
             # append useful information
             table.append(
                 [
-                    course["name"],
+                    f"{name_surround_char}{course['name']}{name_surround_char}",
                     course.get("type", "-")[0],
                     f"{minutes_to_HHMM(courses[i]['time']['start'])}-{minutes_to_HHMM(courses[i]['time']['end'])}",
                     course["classroom"].get("number", "-"),
