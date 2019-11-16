@@ -1,7 +1,7 @@
 import sys
 import os
 from yaml import safe_load, YAMLError
-from subprocess import call
+from subprocess import call, Popen
 from datetime import timedelta, datetime
 from signal import signal, SIGINT
 from typing import Union
@@ -72,7 +72,7 @@ def open_in_ranger(path: str) -> None:
 
 def open_in_firefox(url: str):
     """Opens the specified website in FireFox."""
-    call(["firefox", "-new-window", url])
+    Popen(["firefox", "-new-window", url])
 
 
 def get_next_course_message(i: int, courses: list) -> str:
