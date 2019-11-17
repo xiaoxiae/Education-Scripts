@@ -1,4 +1,5 @@
 # the default template
-d, default: -p --template=eisvogel.tex --listings --pdf-engine=lualatex --toc
+d, default: -p --listings --pdf-engine=xelatex --toc -V geometry:margin=2.5cm
+e, eisvogel: -p --template=eisvogel.tex --listings --pdf-engine=lualatex --toc
 h, homework: -p --listings --pdf-engine=lualatex -V geometry:margin=1.5cm -V papersize:a5 
 
