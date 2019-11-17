@@ -75,6 +75,11 @@ def open_in_firefox(url: str):
     Popen(["firefox", "-new-window", url])
 
 
+def open_in_xournalpp(path: str):
+    """Opens the specified Xournal++ file in Xournal++."""
+    Popen(["xournalpp", path])
+
+
 def get_next_course_message(i: int, courses: list) -> str:
     """Returns the string of the cron job that should be ran for the upcoming course."""
     next_course = (
@@ -267,6 +272,29 @@ def open_course(argument: str = None) -> None:
             open_in_ranger(get_course_path(courses[0], ignore_type=True))
 
 
+def open_notes(argument: str = None) -> None:
+    """Opens the specified course's website in Xournal++."""
+    if argument == None:
+        current_course = get_ongoing_course()
+
+        if current_course != None:
+            open_in_xournalpp(
+                os.path.join(get_course_path(current_course), "notes.xopp")
+            )
+        else:
+            print(f"No currently ongoing course.")
+    else:
+        courses = get_course_from_argument(argument)
+
+        if len(courses) == 0:
+            print(f"Course with the identifier '{argument}' not found.")
+        elif len(courses) == 1:
+            print(os.path.join(get_course_path(courses[0]), "notes.xopp"))
+            open_in_xournalpp(os.path.join(get_course_path(courses[0]), "notes.xopp"))
+        else:
+            print(f"Multiple courses matching the '{argument}' identifier.")
+
+
 def open_website(argument: str = None) -> None:
     """Opens the specified course's website in FireFox."""
     if argument == None:
@@ -388,7 +416,7 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 decision_tree = {
     "list": {"courses": list_courses, "homework": list_homework},
     "compile": {"cron": compile_cron_jobs, "notes": compile_notes},
-    "open": {"course": open_course, "website": open_website},
+    "open": {"course": open_course, "website": open_website, "notes": open_notes},
 }
 
 arguments = sys.argv[1:]
