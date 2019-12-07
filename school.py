@@ -182,11 +182,22 @@ def list_courses(option="") -> None:
     for i, course in enumerate(courses):
         course_weekday = day_index(course["time"]["day"])
 
-        if (
-            (option == "t" and current_weekday == course_weekday)
-            or (option == "tm" and (current_weekday + 1) % 7 == course_weekday)
-            or option == ""
-        ):
+        # lambda functions to test for various options
+        # a is current weekday and b is the course's weekday
+        options = {
+            "": lambda a, b: True,
+            "t": lambda a, b: a == b,
+            "to": lambda a, b: (a + 1) % 7 == b,
+            "mo": lambda a, b: b == 0,
+            "tu": lambda a, b: b == 1,
+            "we": lambda a, b: b == 2,
+            "th": lambda a, b: b == 3,
+            "fr": lambda a, b: b == 4,
+            "sa": lambda a, b: b == 5,
+            "su": lambda a, b: b == 6,
+        }
+
+        if options[option](current_weekday, course_weekday):
             # include the name of the day before first day's course
             if courses[i - 1]["time"]["day"] != courses[i]["time"]["day"]:
                 # calculate the date of the next occurrence of this weekday
