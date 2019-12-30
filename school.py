@@ -1,13 +1,111 @@
 import sys
 import os
 from yaml import safe_load, YAMLError
-from subprocess import call, Popen
+from subprocess import call, Popen, DEVNULL
 from datetime import timedelta, datetime
+from typing import *
+from dataclasses import *
+from functools import partial
+
+# catch SIGINT and prevent it from terminating the script, since an instance of Ranger
+# might be running and it crashes when called using subprocess. Popen (might be related
+# to https://github.com/ranger/ranger/issues/898)
 from signal import signal, SIGINT
-from typing import Union
+
+signal(SIGINT, lambda _, __: None)
+
+### DATACLASSES PRESCRIBING THE YAML SYNTAX ###
+@dataclass
+class Strict:
+    """A class for strictly checking whether each of the dataclass var types match."""
+
+    def __post_init__(self):
+        error_message = "The key '{}' in class {} expected '{}' but got '{}' instead."
+
+        for name, field_type in self.__annotations__.items():
+            value = self.__dict__[name]
+
+            # ignore None values and Any types
+            if value is None or get_origin(field_type) is Any:
+                continue
+
+            # go through all of the field types and check the types
+            for f in (
+                get_args(field_type)
+                if get_origin(field_type) is Union
+                else [field_type]
+            ):
+                if isinstance(value, f):
+                    break
+            else:
+                raise TypeError(
+                    error_message.format(
+                        name,
+                        self.__class__.__name__,
+                        field_type.__name__,
+                        type(value).__name__,
+                    ),
+                )
 
 
-# global variables
+@dataclass
+class Teacher(Strict):
+    name: Union[str, list]
+    email: Union[str, list] = None
+    website: str = None
+    office: str = None
+    note: str = None
+
+
+@dataclass
+class Classroom(Strict):
+    address: str
+    number: str = None
+    floor: int = None
+
+
+@dataclass
+class Time(Strict):
+    day: str
+    start: int
+    end: int
+    weeks: str = None
+
+
+@dataclass
+class Course(Strict):
+    name: str
+    type: str
+    abbreviation: str
+
+    teacher: Teacher
+    classroom: Classroom
+    time: Time
+
+    website: str = None
+
+    def is_ongoing(self) -> bool:
+        """Returns True if the course is ongoing and False if not."""
+        today = datetime.today()
+
+        return (
+            today.weekday() == self.weekday()
+            and self.time.start <= today.hour * 60 + today.minute <= self.time.end
+        )
+
+    def weekday(self) -> int:
+        """Get the weekday the course is on."""
+        weekdays = ["mo", "tu", "we", "th", "fr", "sa", "su"]
+        return weekdays.index(self.time.day.lower()[:2])
+
+    def path(self, ignore_type: bool = False) -> str:
+        """Returns the path of the course (possibly ignoring the type)."""
+        return os.path.join(
+            *([courses_folder, self.name] + ([] if ignore_type else [self.type]))
+        )
+
+
+### GLOBAL VARIABLES ###
 courses_folder = "aktuální semestr/"
 
 
@@ -16,94 +114,70 @@ def get_cron_schedule(time: int, day: int) -> str:
     return f"{time % 60} {time // 60} * * {day + 1}"  # day + 1, since 0 == Sunday
 
 
-def is_ongoing_course(course) -> bool:
-    """Returns True if the input course is ongoing, else False."""
-    today = datetime.today()
-    weekday, current_time = today.weekday(), today.hour * 60 + today.minute
-
-    course_weekday = day_index(course["time"]["day"])
-    course_start, course_end = course["time"]["start"], course["time"]["end"]
-
-    return weekday == course_weekday and course_start <= current_time <= course_end
+def minutes_to_HHMM(minutes: int) -> str:
+    """Converts a number of minutes to a string in the form HH:MM."""
+    return f"{str(minutes // 60).rjust(2)}:{minutes % 60:02d}"
 
 
-def get_ongoing_course() -> Union[dict, None]:
-    """Returns the currently ongoing course (or None)."""
-
+def get_ongoing_course() -> Union[Course, None]:
+    """Returns the currently ongoing course (or None if there is no ongoing course)."""
     for course in get_sorted_courses():
-        if is_ongoing_course(course):
+        if course.is_ongoing():
             return course
-    else:
-        return None
 
 
-def get_course_from_argument(argument: str) -> list:
-    """Returns all courses that match the format name-[type] or abbreviation-[type]."""
-    courses = []
+def get_course_from_argument(argument: str) -> List[Course]:
+    """Returns all courses that match the format name-[type] or abbreviation-[type].
+    Examples: of valid identifiers: ups-c, la, la-p, dm-c."""
+    parts = argument.lower().split("-")
 
-    parts = argument.split("-")
-    course_identifier = parts[0].lower()
-    course_type = None if len(parts) == 1 else parts[1].lower()
+    abbr = parts[0]
+    type = None if len(parts) == 1 else parts[1]
 
-    for course in get_sorted_courses():
-        name, abbr = course["name"].lower(), course["abbreviation"].lower()
+    # special case for 'next'
+    if abbr == "next":
+        today = datetime.today()
 
-        name_matches = course_identifier == name or course_identifier == abbr
-        type_matches = course_type == None or course_type == course["type"][0]
+        current_week_time = today.weekday() * 1440 + today.hour * 60 + today.minute
+        min_time, min_course = float("+inf"), None
 
-        if name_matches and type_matches:
-            courses.append(course)
+        # TODO: do binary search
+        for course in get_sorted_courses():
+            time_to_course = (
+                (course.time.start + course.weekday() * 1440) - current_week_time
+            ) % 10080  # number of minutes in a week
 
-    return courses
+            if time_to_course < min_time:
+                min_time = time_to_course
+                min_course = course
 
+        return [min_course]
 
-def get_course_path(course: dict, ignore_type: bool = False):
-    """Returns the path of the specified course."""
-    if ignore_type:
-        return os.path.join(courses_folder, course["name"])
-    else:
-        return os.path.join(courses_folder, course["name"], course["type"])
-
-
-def open_in_ranger(path: str) -> None:
-    """Opens the specified path in Ranger."""
-    call(["ranger", path])
-
-
-def open_in_firefox(url: str):
-    """Opens the specified website in FireFox."""
-    Popen(["firefox", "-new-window", url])
-
-
-def open_in_xournalpp(path: str):
-    """Opens the specified Xournal++ file in Xournal++."""
-    Popen(["xournalpp", path])
+    return [
+        course
+        for course in get_sorted_courses()
+        if abbr == course.abbreviation.lower() and type in {None, course.type[0]}
+    ]
 
 
 def get_next_course_message(i: int, courses: list) -> str:
     """Returns the string of the cron job that should be ran for the upcoming course."""
     next_course = (
         None
-        if i + 1 >= len(courses)
-        or courses[i]["time"]["day"] != courses[i + 1]["time"]["day"]
+        if i + 1 >= len(courses) or courses[i].time.day != courses[i + 1].time.day
         else courses[i + 1]
     )
 
     return (
-        "dnes již žádný další předmět není."
+        "Dnes již žádný další předmět není."
         if next_course is None
         else (
-            f"další předmět je <i>{next_course['name']} ({next_course['type']})</i>, "
-            + f"který začíná <i>{next_course['time']['start'] - courses[i]['time']['end']} minut</i> po tomto "
-            + f"v učebně <i>{next_course['classroom']['number']}</i> "
-            + f"({next_course['classroom']['floor']}. patro)."
+            f"Další předmět je <i>{next_course.name} ({next_course.type})</i>, "
+            + f"který začíná <i>{next_course.time.start - courses[i].time.end} minut</i> po tomto "
+            + f"v učebně <i>{next_course.classroom.number}</i> "
+            + f"({next_course.classroom.floor}. patro)."
         )
     )
-
-
-def minutes_to_HHMM(minutes: int) -> str:
-    """Converts a number of minutes to a string in the form HH:MM."""
-    return f"{str(minutes // 60).rjust(2)}:{minutes % 60:02d}"
 
 
 def weekday_to_cz(day: str) -> str:
@@ -119,69 +193,46 @@ def weekday_to_cz(day: str) -> str:
     }[day.lower()]
 
 
-def day_index(day: str) -> int:
-    """Returns the index of the day in a week."""
-    return [
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-        "sunday",
-    ].index(day.lower())
+def dataclass_from_dict(c, d):
+    """A helper function that converts a nested dictionary to a dataclass.
+    Inspired by https://stackoverflow.com/a/54769644."""
+    if is_dataclass(c):
+        fieldtypes = {f.name: f.type for f in fields(c)}
+        return c(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})
+    else:
+        return d
 
 
-def get_sorted_courses(sort=False) -> list:
-    """Returns a list of dictionaries with the parsed courses."""
+def get_sorted_courses() -> List[Course]:
+    """Returns a list of Course dataclasses from the courses .yaml files."""
     courses = []
 
     for root, _, filenames in os.walk(courses_folder):
-        for filename in filenames:
-            if filename.endswith(".yaml"):
-                with open(os.path.join(root, filename), "r") as f:
-                    try:
-                        courses.append(safe_load(f))
-                    except YAMLError as e:
-                        print(f"ERROR: {e}")
-                        sys.exit()
+        for filename in filter(lambda f: f.endswith(".yaml"), filenames):
+            path = os.path.join(root, filename)
 
-    return sorted(
-        courses, key=lambda c: (day_index(c["time"]["day"]), c["time"]["start"])
-    )
+            with open(path, "r") as f:
+                try:
+                    courses.append(dataclass_from_dict(Course, safe_load(f)))
+                except YAMLError as e:
+                    sys.exit(f"ERROR in {path}: {e}")
+                except KeyError as e:
+                    sys.exit(f"ERROR in {path}: Invalid key {e}.")
+                except TypeError as e:
+                    sys.exit(f"ERROR in {path}: {e}")
 
-
-def list_homework() -> None:
-    """Lists information about a course's homework."""
-    output = []
-    for course in filter(lambda c: "homework" in c, get_sorted_courses()):
-        output.append(f"{course['name']} ({course['type']}):")
-
-        for homework in sorted(course["homework"], key=lambda x: tuple(x)):
-            # not sure how to make this part better, but this is definitely not it
-            date, desc = tuple(*homework.items())
-            today = datetime.today().date()
-
-            output.append(
-                f"- due in {(date - today).days} days: {desc} ({date:%d/%m/%Y})"
-            )
-
-        output.append("")
-
-    print("\n".join(output[:-1]))
+    return sorted(courses, key=lambda c: (c.weekday(), c.time.start))
 
 
-def list_courses(option="") -> None:
+def list_courses(option=""):
     """Lists information about the courses."""
-    courses = get_sorted_courses(sort=True)
+    courses = get_sorted_courses()
 
     current_day = datetime.today()
     current_weekday = current_day.weekday()
 
     table = []
     for i, course in enumerate(courses):
-        course_weekday = day_index(course["time"]["day"])
-
         # lambda functions to test for various options
         # a is current weekday and b is the course's weekday
         options = {
@@ -197,38 +248,43 @@ def list_courses(option="") -> None:
             "su": lambda a, b: b == 6,
         }
 
-        if options[option](current_weekday, course_weekday):
+        if option not in options:
+            sys.exit("Invalid option!")
+
+        if options[option](current_weekday, course.weekday()):
+
             # include the name of the day before first day's course
-            if courses[i - 1]["time"]["day"] != courses[i]["time"]["day"]:
+            if courses[i - 1].time.day != courses[i].time.day:
                 # calculate the date of the next occurrence of this weekday
                 weekday_date = current_day + timedelta(
-                    days=(course_weekday - current_weekday) % 7
+                    days=(course.weekday() - current_weekday) % 7
                 )
 
                 table.append(
                     [
-                        f"{weekday_to_cz(courses[i]['time']['day']).capitalize()} / {weekday_date.strftime('%e. %m.')}"
+                        f"{weekday_to_cz(courses[i].time.day).capitalize()} / {weekday_date.strftime('%-d. %-m.')}"
                     ]
                 )
 
-            # for possibly surrounding the name with chars if it's the ongoing course
-            name_surround_char = "•" if is_ongoing_course(course) else ""
+            # for possibly surrounding the name with chars if it's ongoing
+            name_surround_char = "•" if course.is_ongoing() else ""
 
             # append useful information
             table.append(
                 [
-                    f"{name_surround_char}{course['name']}{name_surround_char}",
-                    course.get("type", "-")[0],
-                    f"{minutes_to_HHMM(courses[i]['time']['start'])}-{minutes_to_HHMM(courses[i]['time']['end'])}",
-                    course["classroom"].get("number", "-"),
-                    str(course["classroom"].get("floor", "-")),
+                    f"{name_surround_char}{course.name}{name_surround_char}",
+                    "-" if course.type is None else course.type[0],
+                    f"{minutes_to_HHMM(courses[i].time.start)}-{minutes_to_HHMM(courses[i].time.end)}",
+                    "-" if course.classroom.number is None else course.classroom.number,
+                    "-"
+                    if course.classroom.floor is None
+                    else str(course.classroom.floor),
                 ]
             )
 
     # if no courses were added since the days didn't match, exit with a message
     if len(table) == 0:
-        print("No courses matching the criteria found!")
-        sys.exit()
+        sys.exit("No courses matching the criteria found!")
 
     # find max width of each of the columns of the table
     column_widths = [0] * max(len(row) for row in table)
@@ -263,86 +319,80 @@ def list_courses(option="") -> None:
     print(f"╰{'─' * (max_row_width + 2)}╯")
 
 
-def open_course(argument: str = None) -> None:
-    """Opens the specified course in Ranger, or the current one."""
-    if argument == None:
-        current_course = get_ongoing_course()
+def open_in_ranger(path: str):
+    """Opens the specified path in Ranger."""
+    call(["ranger", path])
 
-        if current_course != None:
-            open_in_ranger(get_course_path(current_course))
-        else:
-            print(f"No currently ongoing course.")
+
+def open_in_firefox(url: str):
+    """Opens the specified website in FireFox."""
+    Popen(["firefox", "-new-window", url])
+
+
+def open_in_xournalpp(path: str):
+    """Opens the specified Xournal++ file in Xournal++."""
+    # suppress the warnings, since Xournal++ talks way too much
+    Popen(["xournalpp", path], stdout=DEVNULL, stderr=DEVNULL)
+
+
+def open_course(kind: str, argument: str):
+    """Open the course's something."""
+    # get a list of course/courses either being ongoing or matching the argument
+    if argument is None:
+        course = get_ongoing_course()
+        courses = [] if course is None else [course]
     else:
         courses = get_course_from_argument(argument)
 
-        if len(courses) == 0:
-            print(f"Course with the identifier '{argument}' not found.")
-        elif len(courses) == 1:
-            open_in_ranger(get_course_path(courses[0]))
-        else:
-            open_in_ranger(get_course_path(courses[0], ignore_type=True))
+    # if none were found
+    if len(courses) == 0:
+        sys.exit(f"No course matching the criteria.")
 
+    # if one was found
+    elif len(courses) == 1:
+        course = courses[0]
 
-def open_notes(argument: str = None) -> None:
-    """Opens the specified course's website in Xournal++."""
-    if argument == None:
-        current_course = get_ongoing_course()
-
-        if current_course != None:
-            open_in_xournalpp(
-                os.path.join(get_course_path(current_course), "notes.xopp")
-            )
-        else:
-            print(f"No currently ongoing course.")
-    else:
-        courses = get_course_from_argument(argument)
-
-        if len(courses) == 0:
-            print(f"Course with the identifier '{argument}' not found.")
-        elif len(courses) == 1:
-            print(os.path.join(get_course_path(courses[0]), "notes.xopp"))
-            open_in_xournalpp(os.path.join(get_course_path(courses[0]), "notes.xopp"))
-        else:
-            print(f"Multiple courses matching the '{argument}' identifier.")
-
-
-def open_website(argument: str = None) -> None:
-    """Opens the specified course's website in FireFox."""
-    if argument == None:
-        current_course = get_ongoing_course()
-
-        if current_course != None:
-            if "website" in current_course:
-                open_in_firefox(current_course["website"])
+        if kind == "website":
+            if course.website is not None:
+                open_in_firefox(course.website)
             else:
-                print("The course has no website.")
-        else:
-            print(f"No currently ongoing course.")
-    else:
-        courses = get_course_from_argument(argument)
+                sys.exit("The course has no website.")
 
-        if len(courses) == 0:
-            print(f"Course with the identifier '{argument}' not found.")
-        elif len(courses) == 1:
-            if "website" in courses[0]:
-                open_in_firefox(courses[0]["website"])
+        elif kind == "folder":
+            open_in_ranger(course.path())
+
+        elif kind == "notes":
+            path = os.path.join(course.path(), "notes.xopp")
+
+            # check if the default notes exist
+            if not os.path.isfile(path):
+                sys.exit(f"The course has no notes.")
             else:
-                print("The course has no website.")
+                open_in_xournalpp(path)
+
+    # if multiple were found
+    else:
+        if kind == "folder":
+            open_in_ranger(courses[0].path(ignore_type=True))
         else:
-            print(f"Multiple courses matching the '{argument}' identifier.")
+            sys.exit(f"Multiple courses matching the identifier.")
 
 
 def compile_notes() -> None:
     """Runs md_to_pdf script on all of the courses."""
     base = os.path.dirname(os.path.realpath(__file__))
 
-    for path in map(get_course_path, get_sorted_courses()):
+    for path in map(lambda c: c.path(), get_sorted_courses()):
         os.chdir(os.path.join(base, path))
         call(["fish", "-c", "md_to_pdf -a -t"])
 
 
 def compile_cron_jobs() -> None:
-    """Adds notifications for upcoming classes to crontab file."""
+    """Adds notifications for upcoming classes to the crontab file."""
+    # check if the script is running as root; if not, exit, since we can't write to file
+    if not os.geteuid() == 0:
+        sys.exit("ERROR: Run this script as root to update the crontab file.")
+
     courses = get_sorted_courses()
 
     cron_file = "/etc/crontab"
@@ -365,9 +415,9 @@ def compile_cron_jobs() -> None:
             if contents[i].strip() == cron_file_comments["beginning"]:
                 while contents[i].strip() != cron_file_comments["end"]:
                     i += 1
-                else:
-                    i += 1
-                    break
+
+                i += 1
+                break
             else:
                 f.write(contents[i])
 
@@ -376,17 +426,15 @@ def compile_cron_jobs() -> None:
         f.write(cron_file_comments["beginning"] + "\n")
 
         for j, course in enumerate(courses):
-            day = day_index(course["time"]["day"])
-
             # the messages regarding the course
             messages = [
                 (
-                    get_cron_schedule(course["time"]["end"] - 5, day),
+                    get_cron_schedule(course.time.end - 5, course.weekday()),
                     get_next_course_message(j, courses),
                 ),
                 (
-                    get_cron_schedule(course["time"]["start"], day),
-                    f"právě začal předmět <i>{course['name']} ({course['type']})</i>.",
+                    get_cron_schedule(course.time.start, course.weekday()),
+                    f"právě začal předmět <i>{course.name} ({course.type})</i>.",
                 ),
             ]
 
@@ -400,34 +448,34 @@ def compile_cron_jobs() -> None:
             f.write(contents[i])
             i += 1
 
+        # cut whatever is left
         f.truncate()
 
 
-def list_recursive_help(tree: dict, indentation: int) -> None:
+def list_help(tree: Dict, indentation: int) -> None:
     """Recursively pretty-prints a nested dictionary (with lists being functions)."""
-    for decision in tree:
-        if type(tree[decision]) != dict:
+    for k, v in tree.items():
+        if type(v) is not dict:
             print(
-                ("  " * indentation + "{" + decision + "}").ljust(20)
-                + tree[decision].__doc__
+                ("  " * indentation + "{" + k + "}").ljust(20)
+                + (v.func if type(v) is partial else v).__doc__
             )
         else:
-            print("  " * indentation + f"{{{decision}}}")
-            list_recursive_help(tree[decision], indentation + 1)
+            print("  " * indentation + f"{{{k}}}")
+            list_help(v, indentation + 1)
 
-
-# catch SIGINT and prevent it from terminating the script, since an instance of Ranger
-# might be running and it crashes when called using subprocess. Popen (might be related
-# to https://github.com/ranger/ranger/issues/898)
-signal(SIGINT, lambda _x, _y: None)
 
 # change path to current folder for the script to work
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 decision_tree = {
-    "list": {"courses": list_courses, "homework": list_homework},
+    "list": {"courses": list_courses},
     "compile": {"cron": compile_cron_jobs, "notes": compile_notes},
-    "open": {"course": open_course, "website": open_website, "notes": open_notes},
+    "open": {
+        "folder": partial(open_course, "folder"),
+        "website": partial(open_course, "website"),
+        "notes": partial(open_course, "notes"),
+    },
 }
 
 arguments = sys.argv[1:]
@@ -440,7 +488,7 @@ if len(arguments) == 0:
         + "supported options:"
     )
 
-    list_recursive_help(decision_tree, 1)
+    list_help(decision_tree, 1)
     sys.exit()
 
 # go down the decision tree
@@ -455,35 +503,24 @@ while len(arguments) != 0 and type(decision_tree) is dict:
 
     # if no match is found, quit with error
     if decisions[-1][0] == 0:
-        print(
-            f"ERROR: '{argument}' doesn't match decisions in the decision tree:",
-            str(tuple(d for _, d in decisions)),
+        sys.exit(
+            f"ERROR: '{argument}' doesn't match decisions in the decision tree: {str(tuple(d for _, d in decisions))}"
         )
-
-        sys.exit()
 
     # filter out the sub-optimal decisions
     decisions = list(filter(lambda x: x == decisions[-1], decisions))
 
     # if there are multiple optimal solutions, the command is ambiguous
     if len(decisions) > 1:
-        print(
-            f"ERROR: Ambiguous decisions for '{argument}':",
-            str(tuple(d for _, d in decisions)),
+        sys.exit(
+            f"ERROR: Ambiguous decisions for '{argument}': {str(tuple(d for _, d in decisions)),}",
         )
-
-        sys.exit()
     else:
         decision_tree = decision_tree[decisions[0][1]]
 
 # if the decision tree isn't a function by now, exit
-if type(decision_tree) == dict:
-    print("ERROR: Decisions remaining:", str(tuple(decision_tree)))
-
-    sys.exit()
+if type(decision_tree) is dict:
+    sys.exit(f"ERROR: Decisions remaining: {str(tuple(decision_tree))}")
 
 # pass the courses folder and the rest of the arguments to the function
-if len(arguments) == 0:
-    decision_tree()
-else:
-    decision_tree(*arguments)
+decision_tree(*arguments)
