@@ -5,3 +5,6 @@ __pycache__/
 # Binary files
 *.xopp
 *.pdf
+
+# ignore the current semester, since it will frequently change
+aktuální semestr
