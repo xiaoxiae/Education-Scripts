@@ -2,7 +2,7 @@ import sys
 import os
 from yaml import safe_load, YAMLError
 from subprocess import call, Popen, DEVNULL
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date
 from typing import *
 from dataclasses import *
 from functools import partial
@@ -17,11 +17,10 @@ signal(SIGINT, lambda _, __: None)
 ### DATACLASSES PRESCRIBING THE YAML SYNTAX ###
 @dataclass
 class Strict:
-    """A class for strictly checking whether each of the dataclass var types match."""
+    """A class for strictly checking whether each of the dataclass variable types match."""
 
     def __post_init__(self):
-        error_message = "The key '{}' in class {} expected '{}' but got '{}' instead."
-
+        """Perform the check."""
         for name, field_type in self.__annotations__.items():
             value = self.__dict__[name]
 
@@ -39,12 +38,10 @@ class Strict:
                     break
             else:
                 raise TypeError(
-                    error_message.format(
-                        name,
-                        self.__class__.__name__,
-                        field_type.__name__,
-                        type(value).__name__,
-                    ),
+                    f"The key '{name}' "
+                    + f"in class {self.__class__.__name__} "
+                    + f"expected '{field_type.__name__}' "
+                    + f"but got '{type(value).__name__}' instead."
                 )
 
 
@@ -59,7 +56,7 @@ class Teacher(Strict):
 
 @dataclass
 class Classroom(Strict):
-    address: str
+    address: str = None
     number: str = None
     floor: int = None
 
@@ -73,16 +70,23 @@ class Time(Strict):
 
 
 @dataclass
+class Finals(Strict):
+    date: date
+    classroom: Classroom
+
+
+@dataclass
 class Course(Strict):
     name: str
     type: str
     abbreviation: str
 
     teacher: Teacher
-    classroom: Classroom
     time: Time
+    classroom: Classroom = None
 
     website: str = None
+    finals: Finals = None
 
     def is_ongoing(self) -> bool:
         """Returns True if the course is ongoing and False if not."""
@@ -103,6 +107,21 @@ class Course(Strict):
         return os.path.join(
             *([courses_folder, self.name] + ([] if ignore_type else [self.type]))
         )
+
+    @classmethod
+    def from_dictionary(cls, d: Dict):
+        """Initialize a Course object from the given dictionary."""
+        return cls.__from_dictionary(cls, d)
+
+    @classmethod
+    def __from_dictionary(cls, c, d):
+        """A helper function that converts a nested dictionary to a dataclass.
+        Inspired by https://stackoverflow.com/a/54769644."""
+        if is_dataclass(c):
+            fieldtypes = {f.name: f.type for f in fields(c)}
+            return c(**{f: cls.__from_dictionary(fieldtypes[f], d[f]) for f in d})
+        else:
+            return d
 
 
 ### GLOBAL VARIABLES ###
@@ -128,7 +147,7 @@ def get_ongoing_course() -> Union[Course, None]:
 
 def get_course_from_argument(argument: str) -> List[Course]:
     """Returns all courses that match the format name-[type] or abbreviation-[type].
-    Examples: of valid identifiers: ups-c, la, la-p, dm-c."""
+    Examples: of valid identifiers (1st semester): ups-c, la, la-p, dm-c."""
     parts = argument.lower().split("-")
 
     abbr = parts[0]
@@ -162,7 +181,7 @@ def get_course_from_argument(argument: str) -> List[Course]:
 
 def get_next_course_message(i: int, courses: list) -> str:
     """Returns the string of the cron job that should be ran for the upcoming course."""
-    next_course = (
+    course = (
         None
         if i + 1 >= len(courses) or courses[i].time.day != courses[i + 1].time.day
         else courses[i + 1]
@@ -170,12 +189,16 @@ def get_next_course_message(i: int, courses: list) -> str:
 
     return (
         "Dnes již žádný další předmět není."
-        if next_course is None
+        if course is None
         else (
-            f"Další předmět je <i>{next_course.name} ({next_course.type})</i>, "
-            + f"který začíná <i>{next_course.time.start - courses[i].time.end} minut</i> po tomto "
-            + f"v učebně <i>{next_course.classroom.number}</i> "
-            + f"({next_course.classroom.floor}. patro)."
+            f"Další předmět je <i>{course.name} ({course.type})</i>, "
+            + f"který začíná <i>{course.time.start - courses[i].time.end} minut</i> po tomto"
+            + (
+                "."
+                if course.classroom is not None
+                else +f" v učebně <i>{course.classroom.number}</i> "
+                + f"({course.classroom.floor}. patro)."
+            )
         )
     )
 
@@ -193,16 +216,6 @@ def weekday_to_cz(day: str) -> str:
     }[day.lower()]
 
 
-def dataclass_from_dict(c, d):
-    """A helper function that converts a nested dictionary to a dataclass.
-    Inspired by https://stackoverflow.com/a/54769644."""
-    if is_dataclass(c):
-        fieldtypes = {f.name: f.type for f in fields(c)}
-        return c(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})
-    else:
-        return d
-
-
 def get_sorted_courses() -> List[Course]:
     """Returns a list of Course dataclasses from the courses .yaml files."""
     courses = []
@@ -213,7 +226,7 @@ def get_sorted_courses() -> List[Course]:
 
             with open(path, "r") as f:
                 try:
-                    courses.append(dataclass_from_dict(Course, safe_load(f)))
+                    courses.append(Course.from_dictionary(safe_load(f)))
                 except YAMLError as e:
                     sys.exit(f"ERROR in {path}: {e}")
                 except KeyError as e:
@@ -222,6 +235,36 @@ def get_sorted_courses() -> List[Course]:
                     sys.exit(f"ERROR in {path}: {e}")
 
     return sorted(courses, key=lambda c: (c.weekday(), c.time.start))
+
+
+def list_finals():
+    """Lists dates of all finals."""
+    # get courses that have finals records in them
+    finals_courses = [c for c in get_sorted_courses() if c.finals is not None]
+    if len(finals_courses) == 0:
+        sys.exit("No finals added (lucky son of a b*)!")
+
+    # build a table
+    finals = [["Finals!"]]
+
+    for course in sorted(finals_courses, key=lambda c: c.finals.date):
+        final = course.finals
+
+        delta = final.date - datetime.today()
+        due_msg = "done" if delta.days < 0 else f"{delta.days + 1} days"
+
+        finals.append(
+            [
+                course.name,
+                final.date.strftime("%_d. %-m. %Y"),
+                final.date.strftime("%_H:%M"),
+                due_msg,
+                str(final.classroom.number),
+                "-" if final.classroom.floor is None else str(final.classroom.floor),
+            ]
+        )
+
+    print_table(finals)
 
 
 def list_courses(option=""):
@@ -274,11 +317,9 @@ def list_courses(option=""):
                 [
                     f"{name_surround_char}{course.name}{name_surround_char}",
                     "-" if course.type is None else course.type[0],
-                    f"{minutes_to_HHMM(courses[i].time.start)}-{minutes_to_HHMM(courses[i].time.end)}",
-                    "-" if course.classroom.number is None else course.classroom.number,
-                    "-"
-                    if course.classroom.floor is None
-                    else str(course.classroom.floor),
+                    f"{minutes_to_HHMM(courses[i].time.start)} - {minutes_to_HHMM(courses[i].time.end)}",
+                    "-" if course.classroom is None else course.classroom.number,
+                    "-" if course.classroom is None else str(course.classroom.floor),
                 ]
             )
 
@@ -286,6 +327,10 @@ def list_courses(option=""):
     if len(table) == 0:
         sys.exit("No courses matching the criteria found!")
 
+    print_table(table)
+
+
+def print_table(table: List[List[str]]):
     # find max width of each of the columns of the table
     column_widths = [0] * max(len(row) for row in table)
     for row in table:
@@ -469,7 +514,7 @@ def list_help(tree: Dict, indentation: int) -> None:
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 decision_tree = {
-    "list": {"courses": list_courses},
+    "list": {"courses": list_courses, "finals": list_finals},
     "compile": {"cron": compile_cron_jobs, "notes": compile_notes},
     "open": {
         "folder": partial(open_course, "folder"),
