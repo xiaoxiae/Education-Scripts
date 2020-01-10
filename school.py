@@ -501,10 +501,7 @@ def list_help(tree: Dict, indentation: int) -> None:
     """Recursively pretty-prints a nested dictionary (with lists being functions)."""
     for k, v in tree.items():
         if type(v) is not dict:
-            print(
-                ("  " * indentation + "{" + k + "}").ljust(20)
-                + (v.func if type(v) is partial else v).__doc__
-            )
+            print(("  " * indentation + "{" + k + "}").ljust(20) + v[1])
         else:
             print("  " * indentation + f"{{{k}}}")
             list_help(v, indentation + 1)
@@ -514,12 +511,27 @@ def list_help(tree: Dict, indentation: int) -> None:
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 decision_tree = {
-    "list": {"courses": list_courses, "finals": list_finals},
-    "compile": {"cron": compile_cron_jobs, "notes": compile_notes},
+    "list": {
+        "courses": (list_courses, "List information about the courses."),
+        "finals": (list_finals, "List dates of all finals."),
+    },
+    "compile": {
+        "cron": (compile_cron_jobs, "Add crontab notifications for all courses.",),
+        "notes": (compile_notes, "Run md_to_pdf script on all course notes."),
+    },
     "open": {
-        "folder": partial(open_course, "folder"),
-        "website": partial(open_course, "website"),
-        "notes": partial(open_course, "notes"),
+        "folder": (
+            partial(open_course, "folder"),
+            "Open the course's folder in Ranger.",
+        ),
+        "website": (
+            partial(open_course, "website"),
+            "Open the course's website in FireFox.",
+        ),
+        "notes": (
+            partial(open_course, "notes"),
+            "Open the course's notes in Xournal++.",
+        ),
     },
 }
 
@@ -565,11 +577,11 @@ while len(arguments) != 0 and type(decision_tree) is dict:
         parsed_arguments.append(decisions[0][1])
         decision_tree = decision_tree[decisions[0][1]]
 
-# if the decision tree isn't a function by now, exit
+# if the decision tree isn't a function by now, exit; else extract the function
 if type(decision_tree) is dict:
     sys.exit(f"ERROR: Decisions remaining: {str(tuple(decision_tree))}")
 
 try:
-    decision_tree(*arguments)
+    decision_tree[0](*arguments)
 except TypeError:
     print(f"Invalid arguments for '{' '.join(parsed_arguments)}'.")
