@@ -380,7 +380,7 @@ def open_in_xournalpp(path: str):
     Popen(["xournalpp", path], stdout=DEVNULL, stderr=DEVNULL)
 
 
-def open_course(kind: str, argument: str):
+def open_course(kind: str, argument: Union[str, None] = None):
     """Open the course's something."""
     # get a list of course/courses either being ongoing or matching the argument
     if argument is None:
@@ -537,6 +537,7 @@ if len(arguments) == 0:
     sys.exit()
 
 # go down the decision tree
+parsed_arguments = []
 while len(arguments) != 0 and type(decision_tree) is dict:
     argument = arguments.pop(0)
 
@@ -561,11 +562,14 @@ while len(arguments) != 0 and type(decision_tree) is dict:
             f"ERROR: Ambiguous decisions for '{argument}': {str(tuple(d for _, d in decisions)),}",
         )
     else:
+        parsed_arguments.append(decisions[0][1])
         decision_tree = decision_tree[decisions[0][1]]
 
 # if the decision tree isn't a function by now, exit
 if type(decision_tree) is dict:
     sys.exit(f"ERROR: Decisions remaining: {str(tuple(decision_tree))}")
 
-# pass the courses folder and the rest of the arguments to the function
-decision_tree(*arguments)
+try:
+    decision_tree(*arguments)
+except TypeError:
+    print(f"Invalid arguments for '{' '.join(parsed_arguments)}'.")
