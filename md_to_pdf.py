@@ -259,7 +259,7 @@ def print_message(*args):
 
 
 # if the template flag was used, parse the additional arguments from the template file
-if arguments.template is not "":
+if arguments.template != "":
     with open(f"{__file__[:-3]}.templates", "r") as f:
         for n, line in enumerate(map(lambda s: s.strip(), f.read().splitlines())):
             # ignore comments

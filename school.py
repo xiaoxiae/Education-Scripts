@@ -2,7 +2,7 @@ import sys
 import os
 from yaml import safe_load, YAMLError
 from subprocess import call, Popen, DEVNULL
-from datetime import timedelta, datetime, date
+from datetime import timedelta, datetime, date, timezone
 from typing import *
 from dataclasses import *
 from functools import partial
@@ -250,7 +250,7 @@ def list_finals():
     for course in sorted(finals_courses, key=lambda c: c.finals.date):
         final = course.finals
 
-        delta = final.date - datetime.today()
+        delta = final.date.replace(tzinfo=None) - datetime.today()
         due_msg = "done" if delta.days < 0 else f"{delta.days + 1} days"
 
         finals.append(
