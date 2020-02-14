@@ -99,8 +99,7 @@ class Course(Strict):
 
     def weekday(self) -> int:
         """Get the weekday the course is on."""
-        weekdays = ["mo", "tu", "we", "th", "fr", "sa", "su"]
-        return weekdays.index(self.time.day.lower()[:2])
+        return WD_EN.index(self.time.day.lower())
 
     def path(self, ignore_type: bool = False) -> str:
         """Returns the path of the course (possibly ignoring the type)."""
@@ -126,6 +125,10 @@ class Course(Strict):
 
 ### GLOBAL VARIABLES ###
 courses_folder = "aktuální semestr/"
+
+# weekday constants
+WD_EN = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sundnay")
+WD_CZ = ("pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota", "neděle")
 
 
 def get_cron_schedule(time: int, day: int) -> str:
@@ -157,14 +160,17 @@ def get_course_from_argument(argument: str) -> List[Course]:
     if abbr == "next":
         today = datetime.today()
 
-        current_week_time = today.weekday() * 1440 + today.hour * 60 + today.minute
+        MID = 1440  # minutes in a day
+        MIW = 10080  # minutes in a week
+
+        current_week_time = today.weekday() * MID + today.hour * 60 + today.minute
         min_time, min_course = float("+inf"), None
 
         # TODO: do binary search
         for course in get_sorted_courses():
             time_to_course = (
-                (course.time.start + course.weekday() * 1440) - current_week_time
-            ) % 10080  # number of minutes in a week
+                (course.time.start + course.weekday() * MID) - current_week_time
+            ) % MIW
 
             if time_to_course < min_time:
                 min_time = time_to_course
@@ -192,12 +198,14 @@ def get_next_course_message(i: int, courses: list) -> str:
         if course is None
         else (
             f"Další předmět je <i>{course.name} ({course.type})</i>, "
-            + f"který začíná <i>{course.time.start - courses[i].time.end} minut</i> po tomto"
+            f"který začíná <i>{course.time.start - courses[i].time.end} minut</i> po tomto"
             + (
                 "."
                 if course.classroom is not None
-                else +f" v učebně <i>{course.classroom.number}</i> "
-                + f"({course.classroom.floor}. patro)."
+                else (
+                    f" v učebně <i>{course.classroom.number}</i> "
+                    f"({course.classroom.floor}. patro)."
+                )
             )
         )
     )
@@ -205,15 +213,7 @@ def get_next_course_message(i: int, courses: list) -> str:
 
 def weekday_to_cz(day: str) -> str:
     """Converts a day in English to a day in Czech"""
-    return {
-        "monday": "pondělí",
-        "tuesday": "úterý",
-        "wednesday": "středa",
-        "thursday": "čtvrtek",
-        "friday": "pátek",
-        "saturday": "sobota",
-        "sunday": "neděle",
-    }[day.lower()]
+    return dict(list(zip(WD_EN, WD_CZ)))[day.lower()]
 
 
 def get_sorted_courses() -> List[Course]:
@@ -227,12 +227,10 @@ def get_sorted_courses() -> List[Course]:
             with open(path, "r") as f:
                 try:
                     courses.append(Course.from_dictionary(safe_load(f)))
-                except YAMLError as e:
+                except (YAMLError, TypeError) as e:
                     sys.exit(f"ERROR in {path}: {e}")
                 except KeyError as e:
                     sys.exit(f"ERROR in {path}: Invalid key {e}.")
-                except TypeError as e:
-                    sys.exit(f"ERROR in {path}: {e}")
 
     return sorted(courses, key=lambda c: (c.weekday(), c.time.start))
 
@@ -242,7 +240,7 @@ def list_finals():
     # get courses that have finals records in them
     finals_courses = [c for c in get_sorted_courses() if c.finals is not None]
     if len(finals_courses) == 0:
-        sys.exit("No finals added (lucky son of a b*)!")
+        sys.exit("No finals added (just you wait)!")
 
     # build a table
     finals = [["Finals!"]]
@@ -295,7 +293,6 @@ def list_courses(option=""):
             sys.exit("Invalid option!")
 
         if options[option](current_weekday, course.weekday()):
-
             # include the name of the day before first day's course
             if courses[i - 1].time.day != courses[i].time.day:
                 # calculate the date of the next occurrence of this weekday
@@ -319,7 +316,6 @@ def list_courses(option=""):
                     "-" if course.type is None else course.type[0],
                     f"{minutes_to_HHMM(courses[i].time.start)} - {minutes_to_HHMM(courses[i].time.end)}",
                     "-" if course.classroom is None else course.classroom.number,
-                    "-" if course.classroom is None else str(course.classroom.floor),
                 ]
             )
 
