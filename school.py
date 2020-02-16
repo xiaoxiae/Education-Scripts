@@ -226,7 +226,19 @@ def get_sorted_courses() -> List[Course]:
 
             with open(path, "r") as f:
                 try:
-                    courses.append(Course.from_dictionary(safe_load(f)))
+                    # get the name and the type from the course folder path
+                    # removes the duplicity while keeping things organized
+                    shortened_path = path[len(courses_folder) :]
+                    course_name = shortened_path[: shortened_path.index(os.sep)]
+
+                    shortened_path = shortened_path[len(course_name) + 1 :]
+                    course_type = shortened_path[: shortened_path.index(os.sep)]
+
+                    course_dict = safe_load(f)
+                    course_dict["name"] = course_name
+                    course_dict["type"] = course_type
+
+                    courses.append(Course.from_dictionary(course_dict))
                 except (YAMLError, TypeError) as e:
                     sys.exit(f"ERROR in {path}: {e}")
                 except KeyError as e:
