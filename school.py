@@ -81,8 +81,8 @@ class Course(Strict):
     type: str
     abbreviation: str
 
-    teacher: Teacher
-    time: Time
+    teacher: Teacher = None
+    time: Time = None
     classroom: Classroom = None
 
     website: str = None
@@ -180,7 +180,7 @@ def get_course_from_argument(argument: str) -> List[Course]:
 
     return [
         course
-        for course in get_sorted_courses()
+        for course in get_sorted_courses(True)
         if abbr == course.abbreviation.lower() and type in {None, course.type[0]}
     ]
 
@@ -216,8 +216,14 @@ def weekday_to_cz(day: str) -> str:
     return dict(list(zip(WD_EN, WD_CZ)))[day.lower()]
 
 
-def get_sorted_courses() -> List[Course]:
-    """Returns a list of Course dataclasses from the courses .yaml files."""
+def weekday_to_en(day: str) -> str:
+    """Converts a day in Czech to a day in English"""
+    return dict(list(zip(WD_CZ, WD_EN)))[day.lower()]
+
+
+def get_sorted_courses(include_unscheduled=False) -> List[Course]:
+    """Returns a list of Course dataclasses from the courses .yaml files. This method
+    ignores courses without a schedule by default."""
     courses = []
 
     for root, _, filenames in os.walk(courses_folder):
@@ -238,19 +244,23 @@ def get_sorted_courses() -> List[Course]:
                     course_dict["name"] = course_name
                     course_dict["type"] = course_type
 
-                    courses.append(Course.from_dictionary(course_dict))
+                    # either it's a normal or an unscheduled course
+                    if "time" in course_dict or include_unscheduled:
+                        courses.append(Course.from_dictionary(course_dict))
                 except (YAMLError, TypeError) as e:
                     sys.exit(f"ERROR in {path}: {e}")
                 except KeyError as e:
                     sys.exit(f"ERROR in {path}: Invalid key {e}.")
 
-    return sorted(courses, key=lambda c: (c.weekday(), c.time.start))
+    return sorted(
+        courses, key=lambda c: (0, 0) if not c.time else (c.weekday(), c.time.start)
+    )
 
 
 def list_finals():
     """Lists dates of all finals."""
     # get courses that have finals records in them
-    finals_courses = [c for c in get_sorted_courses() if c.finals is not None]
+    finals_courses = [c for c in get_sorted_courses(True) if c.finals is not None]
     if len(finals_courses) == 0:
         sys.exit("No finals added (just you wait)!")
 
@@ -279,10 +289,14 @@ def list_finals():
 
 def list_courses(option=""):
     """Lists information about the courses."""
-    courses = get_sorted_courses()
+    courses = get_sorted_courses(True)
 
     current_day = datetime.today()
     current_weekday = current_day.weekday()
+
+    # split to scheduled and non-scheduled
+    unscheduled = [c for c in courses if c.time is None]
+    courses = [c for c in courses if c not in unscheduled]
 
     table = []
     for i, course in enumerate(courses):
@@ -330,6 +344,10 @@ def list_courses(option=""):
                     "-" if course.classroom is None else course.classroom.number,
                 ]
             )
+
+    table.append(["Ostatní"])
+    for course in unscheduled:
+        table.append([course.name, course.type[0], "-", "-"])
 
     # if no courses were added since the days didn't match, exit with a message
     if len(table) == 0:
@@ -435,7 +453,7 @@ def compile_notes() -> None:
     """Runs md_to_pdf script on all of the courses."""
     base = os.path.dirname(os.path.realpath(__file__))
 
-    for path in map(lambda c: c.path(), get_sorted_courses()):
+    for path in map(lambda c: c.path(), get_sorted_courses(True)):
         os.chdir(os.path.join(base, path))
         call(["fish", "-c", "md_to_pdf -a -t"])
 
