@@ -6,6 +6,7 @@ from datetime import timedelta, datetime, date, timezone
 from typing import *
 from dataclasses import *
 from functools import partial
+from unidecode import unidecode
 
 # catch SIGINT and prevent it from terminating the script, since an instance of Ranger
 # might be running and it crashes when called using subprocess. Popen (might be related
@@ -151,13 +152,9 @@ def get_ongoing_course() -> Union[Course, None]:
 def get_course_from_argument(argument: str) -> List[Course]:
     """Returns all courses that match the format name-[type] or abbreviation-[type].
     Examples: of valid identifiers (1st semester): ups-c, la, la-p, dm-c."""
-    parts = argument.lower().split("-")
-
-    abbr = parts[0]
-    type = None if len(parts) == 1 else parts[1]
 
     # special case for 'next'
-    if abbr == "next":
+    if argument == "next":
         today = datetime.today()
 
         MID = 1440  # minutes in a day
@@ -178,11 +175,30 @@ def get_course_from_argument(argument: str) -> List[Course]:
 
         return [min_course]
 
-    return [
+    # if the argument is not 'next', try to interpret the identifier as an abbreviation
+    parts = argument.lower().split("-")
+
+    abbr = parts[0]
+    type = None if len(parts) == 1 else parts[1]
+
+    # courses that were parsed as if the argument was an abbreviation
+    abbr_courses = [
         course
         for course in get_sorted_courses(True)
         if abbr == course.abbreviation.lower() and type in {None, course.type[0]}
     ]
+
+    # return the courses for argument as an abbreviation or for argument as a name
+    return (
+        abbr_courses
+        if len(abbr_courses) != 0
+        else [
+            course
+            for course in get_sorted_courses(True)
+            if unidecode(course.name.lower()).startswith(unidecode(abbr.lower()))
+            and type in {None, course.type[0]}
+        ]
+    )
 
 
 def get_next_course_message(i: int, courses: list) -> str:
