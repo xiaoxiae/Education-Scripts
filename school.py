@@ -476,9 +476,10 @@ def compile_notes() -> None:
 
 def compile_cron_jobs() -> None:
     """Adds notifications for upcoming classes to the crontab file."""
-    # check if the script is running as root; if not, exit, since we can't write to file
+    # check if the script is running as root; if not, call itself as root
     if not os.geteuid() == 0:
-        sys.exit("ERROR: Run this script as root to update the crontab file.")
+        call(["sudo", "python3", *sys.argv])
+        sys.exit()
 
     courses = get_sorted_courses()
 
