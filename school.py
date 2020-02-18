@@ -252,13 +252,15 @@ def get_sorted_courses(include_unscheduled=False) -> List[Course]:
                     # removes the duplicity while keeping things organized
                     shortened_path = path[len(courses_folder) :]
                     course_name = shortened_path[: shortened_path.index(os.sep)]
+                    course_abbreviation = course_name[course_name.rfind(" ") :][2:-1]
 
                     shortened_path = shortened_path[len(course_name) + 1 :]
                     course_type = shortened_path[: shortened_path.index(os.sep)]
 
-                    course_dict = safe_load(f)
-                    course_dict["name"] = course_name
+                    course_dict = safe_load(f) or {}
+                    course_dict["name"] = course_name[: course_name.rfind(" ")]
                     course_dict["type"] = course_type
+                    course_dict["abbreviation"] = course_abbreviation
 
                     # either it's a normal or an unscheduled course
                     if "time" in course_dict or include_unscheduled:
