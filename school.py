@@ -105,7 +105,10 @@ class Course(Strict):
     def path(self, ignore_type: bool = False) -> str:
         """Returns the path of the course (possibly ignoring the type)."""
         return os.path.join(
-            *([courses_folder, self.name] + ([] if ignore_type else [self.type]))
+            *(
+                [courses_folder, f"{self.name} ({self.abbreviation})"]
+                + ([] if ignore_type else [self.type])
+            )
         )
 
     @classmethod
