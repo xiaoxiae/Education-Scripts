@@ -548,10 +548,15 @@ def compile_cron_jobs() -> None:
 def list_help(tree: Dict, indentation: int) -> None:
     """Recursively pretty-prints a nested dictionary (with lists being functions)."""
     for k, v in tree.items():
+        decision = "  " * indentation + f"{{{', '.join(k)}}}"
+
+        # either it's a function with annotation
         if type(v) is not dict:
-            print(("  " * indentation + "{" + k + "}").ljust(20) + v[1])
+            print(decision.ljust(30) + v[1])
+
+        # or it's simply a decision
         else:
-            print("  " * indentation + f"{{{k}}}")
+            print(decision)
             list_help(v, indentation + 1)
 
 
@@ -559,24 +564,25 @@ def list_help(tree: Dict, indentation: int) -> None:
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 decision_tree = {
-    "list": {
-        "courses": (list_courses, "List information about the courses."),
-        "finals": (list_finals, "List dates of all finals."),
+    ("list",): {
+        ("courses",): (list_courses, "List information about the courses."),
+        ("finals",): (list_finals, "List dates of all finals."),
+        ("timeline",): (list_timeline, "List the courses in a timeline."),
     },
-    "compile": {
-        "cron": (compile_cron_jobs, "Add crontab notifications for all courses.",),
-        "notes": (compile_notes, "Run md_to_pdf script on all course notes."),
+    ("compile",): {
+        ("cron",): (compile_cron_jobs, "Add crontab notifications for all courses.",),
+        ("notes",): (compile_notes, "Run md_to_pdf script on all course notes."),
     },
-    "open": {
-        "folder": (
+    ("open",): {
+        ("folder", "course"): (
             partial(open_course, "folder"),
             "Open the course's folder in Ranger.",
         ),
-        "website": (
+        ("website",): (
             partial(open_course, "website"),
             "Open the course's website in FireFox.",
         ),
-        "notes": (
+        ("notes",): (
             partial(open_course, "notes"),
             "Open the course's notes in Xournal++.",
         ),
@@ -603,7 +609,7 @@ while len(arguments) != 0 and type(decision_tree) is dict:
 
     # sort the decisions by their common prefix with the argument
     decisions = sorted(
-        (len(argument) if argument == d[: len(argument)] else 0, d)
+        (max([len(argument) if s.startswith(argument) else 0 for s in d]), d)
         for d in decision_tree
     )
 
