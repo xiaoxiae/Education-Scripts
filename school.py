@@ -464,8 +464,23 @@ def open_course(kind: str, argument: Union[str, None] = None):
 
     # if multiple were found
     else:
-        if kind == "folder":
+        # if multiple courses were found and they're all the same
+        if kind == "folder" and all(
+            [
+                courses[i].abbreviation == courses[i + 1].abbreviation
+                for i in range(len(courses) - 1)
+            ]
+        ):
             open_in_ranger(courses[0].path(ignore_type=True))
+
+        # if multiple courses were found and the websites match
+        elif kind == "website" and all(
+            [
+                courses[i].website == courses[i + 1].website
+                for i in range(len(courses) - 1)
+            ]
+        ):
+            open_in_firefox(courses[0].website)
         else:
             sys.exit(f"Multiple courses matching the identifier.")
 
