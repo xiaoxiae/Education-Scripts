@@ -361,12 +361,13 @@ def list_courses(option=""):
                 [
                     f"{name_surround_char}{course.name}{name_surround_char}",
                     "-" if course.type is None else course.type[0],
-                    f"{minutes_to_HHMM(courses[i].time.start)} - {minutes_to_HHMM(courses[i].time.end)}",
+                    f"{minutes_to_HHMM(courses[i].time.start)} - {minutes_to_HHMM(courses[i].time.end)}"
+                    + ("" if course.time.weeks is None else f" ({course.time.weeks})"),
                     "-" if course.classroom is None else course.classroom.number,
                 ]
             )
 
-    table.append(["Ostatní"])
+    table.append(["Nerozvrženo"])
     for course in unscheduled:
         table.append([course.name, course.type[0], "-", "-"])
 
