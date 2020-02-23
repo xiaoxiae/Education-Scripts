@@ -220,10 +220,14 @@ def get_next_course_message(i: int, courses: list) -> str:
             f"který začíná <i>{course.time.start - courses[i].time.end} minut</i> po tomto"
             + (
                 "."
-                if course.classroom is not None
+                if course.classroom is None
                 else (
-                    f" v učebně <i>{course.classroom.number}</i> "
-                    f"({course.classroom.floor}. patro)."
+                    f" v učebně <i>{course.classroom.number}</i>"
+                    + (
+                        "."
+                        if course.classroom.floor is None
+                        else (f" ({course.classroom.floor}. patro).")
+                    )
                 )
             )
         )
@@ -565,6 +569,8 @@ def compile_cron_jobs() -> None:
         # cut whatever is left
         f.truncate()
 
+        print(f"Course messaged generated and saved to {cron_file}.")
+
 
 def list_help(tree: Dict, indentation: int) -> None:
     """Recursively pretty-prints a nested dictionary (with lists being functions)."""
@@ -642,16 +648,16 @@ while len(arguments) != 0 and type(decision_tree) is dict:
     # if no match is found, quit with error
     if decisions[-1][0] == 0:
         sys.exit(
-            f"ERROR: '{argument}' doesn't match decisions in the decision tree: {str(tuple(d for _, d in decisions))}"
+            f"ERROR: '{argument}' doesn't match decisions in the decision tree: {{{', '.join(' or '.join(d) for d in decision_tree)}}}"
         )
 
     # filter out the sub-optimal decisions
-    decisions = list(filter(lambda x: x == decisions[-1], decisions))
+    decisions = list(filter(lambda x: x[0] == decisions[-1][0], decisions))
 
     # if there are multiple optimal solutions, the command is ambiguous
     if len(decisions) > 1:
         sys.exit(
-            f"ERROR: Ambiguous decisions for '{argument}': {str(tuple(d for _, d in decisions)),}",
+            f"ERROR: Ambiguous decisions for '{argument}': {{{', '.join(' or '.join(d) for _, d in decisions)}}}",
         )
     else:
         parsed_arguments.append(decisions[0][1])
@@ -660,7 +666,7 @@ while len(arguments) != 0 and type(decision_tree) is dict:
 # if the decision tree isn't a function by now, exit; else extract the function
 if type(decision_tree) is dict:
     sys.exit(
-        f"ERROR: Decisions remaining: {str(tuple(', '.join(d) for d in decision_tree))}"
+        f"ERROR: Decisions remaining: {{{', '.join(' or '.join(d) for d in decision_tree)}}}"
     )
 
 try:
