@@ -649,9 +649,13 @@ while len(arguments) != 0 and type(decision_tree) is dict:
 
 # if the decision tree isn't a function by now, exit; else extract the function
 if type(decision_tree) is dict:
-    sys.exit(f"ERROR: Decisions remaining: {str(tuple(decision_tree))}")
+    sys.exit(
+        f"ERROR: Decisions remaining: {str(tuple(', '.join(d) for d in decision_tree))}"
+    )
 
 try:
     decision_tree[0](*arguments)
 except TypeError:
-    print(f"Invalid arguments for '{' '.join(parsed_arguments)}'.")
+    print(
+        f"Invalid arguments for '{', '.join([' '.join(a) for a in parsed_arguments])}'."
+    )
