@@ -412,6 +412,11 @@ def print_table(table: List[List[str]]):
     print(f"╰{'─' * (max_row_width + 2)}╯")
 
 
+def open_in_vim(path: str):
+    """Opens the specified path in Vim."""
+    call(["vim", path])
+
+
 def open_in_ranger(path: str):
     """Opens the specified path in Ranger."""
     call(["ranger", path])
@@ -589,6 +594,10 @@ decision_tree = {
         ("cron",): (compile_cron_jobs, "Add crontab notifications for all courses.",),
         ("notes",): (compile_notes, "Run md_to_pdf script on all course notes."),
     },
+    ("config",): (
+        partial(open_in_ranger, os.path.dirname(os.path.abspath(__file__))),
+        "Open the course directory in Ranger.",
+    ),
     ("open",): {
         ("folder", "course"): (
             partial(open_course, "folder"),
@@ -602,6 +611,7 @@ decision_tree = {
             partial(open_course, "notes"),
             "Open the course's notes in Xournal++.",
         ),
+        ("script",): (partial(open_in_vim, sys.argv[0]), "Open this script in Vim."),
     },
 }
 
