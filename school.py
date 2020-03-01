@@ -134,6 +134,9 @@ courses_folder = "aktuální semestr/"
 WD_EN = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sundnay")
 WD_CZ = ("pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota", "neděle")
 
+# flags
+short = False
+
 
 def get_cron_schedule(time: int, day: int) -> str:
     """Returns the cron schedule expression for the specified parameters."""
@@ -362,7 +365,7 @@ def list_courses(option=""):
             # append useful information
             table.append(
                 [
-                    f"{name_surround_char}{course.name}{name_surround_char}",
+                    f"{name_surround_char}{course.name if not short else course.abbreviation}{name_surround_char}",
                     "-" if course.type is None else course.type[0],
                     f"{minutes_to_HHMM(courses[i].time.start)} - {minutes_to_HHMM(courses[i].time.end)}"
                     + ("" if course.time.weeks is None else f" ({course.time.weeks})"),
@@ -372,7 +375,14 @@ def list_courses(option=""):
 
     table.append(["Nerozvrženo"])
     for course in unscheduled:
-        table.append([course.name, course.type[0], "-", "-"])
+        table.append(
+            [
+                course.name if not short else course.abbreviation,
+                course.type[0],
+                "-",
+                "-",
+            ]
+        )
 
     # if no courses were added since the days didn't match, exit with a message
     if len(table) == 0:
@@ -622,6 +632,21 @@ decision_tree = {
 
 arguments = sys.argv[1:]
 
+# parse flags
+i = 0
+while i < len(arguments):
+    if not arguments[i].startswith("-"):
+        i += 1
+        continue
+
+    # TODO: use reflection to do this automatically?
+    argument = arguments.pop(i)
+    if argument in ("--short", "-s"):
+        short = True
+
+    i += 1
+
+
 # if no arguments are specified, list help
 if len(arguments) == 0:
     print(
@@ -631,6 +656,13 @@ if len(arguments) == 0:
     )
 
     list_help(decision_tree, 1)
+
+    print(
+        "\nsupported supported flags:\n"
+        + "  --short/-s".ljust(30)
+        + "Shorten names to abbreviations (when possible)."
+    )
+
     sys.exit()
 
 # go down the decision tree
