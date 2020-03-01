@@ -439,10 +439,10 @@ def open_in_xournalpp(path: str):
 
 def open_course(kind: str, argument: Union[str, None] = None):
     """Open the course's something."""
-    # get a list of course/courses either being ongoing or matching the argument
+    # if no argument is specified, default to getting the current or the next course
     if argument is None:
         course = get_ongoing_course()
-        courses = [] if course is None else [course]
+        courses = get_course_from_argument("next") if course is None else [course]
     else:
         courses = get_course_from_argument(argument)
 
