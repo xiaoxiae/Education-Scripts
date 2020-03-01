@@ -328,9 +328,9 @@ def list_courses(option=""):
         # lambda functions to test for various options
         # a is current weekday and b is the course's weekday
         options = {
-            "": lambda a, b: True,
-            "t": lambda a, b: a == b,
-            "to": lambda a, b: (a + 1) % 7 == b,
+            "": lambda a, b: True,  # all of them
+            "t": lambda a, b: a == b,  # today
+            "tm": lambda a, b: (a + 1) % 7 == b,  # tomorrow
             "mo": lambda a, b: b == 0,
             "tu": lambda a, b: b == 1,
             "we": lambda a, b: b == 2,
@@ -346,16 +346,15 @@ def list_courses(option=""):
         if options[option](current_weekday, course.weekday()):
             # include the name of the day before first day's course
             if courses[i - 1].time.day != courses[i].time.day:
-                # calculate the date of the next occurrence of this weekday
-                weekday_date = current_day + timedelta(
-                    days=(course.weekday() - current_weekday) % 7
-                )
+                weekday = weekday_to_cz(courses[i].time.day).capitalize()
 
-                table.append(
-                    [
-                        f"{weekday_to_cz(courses[i].time.day).capitalize()} / {weekday_date.strftime('%-d. %-m.')}"
-                    ]
-                )
+                # calculate the next occurrence
+                date = (
+                    current_day
+                    + timedelta(days=(course.weekday() - current_weekday) % 7)
+                ).strftime("%-d. %-m.")
+
+                table.append([f"{weekday} / {date}"])
 
             # for possibly surrounding the name with chars if it's ongoing
             name_surround_char = "•" if course.is_ongoing() else ""
