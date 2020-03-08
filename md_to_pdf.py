@@ -183,7 +183,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
         nargs="?",
         default="",
         help="use a pre-made template found in md_to_pdf.templates; if the flag is"
-        + "used and no template is specified, the first one is used",
+        + "used and no template is specified, the first one in the file is used",
     )
 
     # either convert all files, only specific files or use a template
@@ -273,7 +273,8 @@ if arguments.template != "":
             while i < len(line):
                 # parse the template name
                 for j in range(i, len(line)):
-                    if not (line[j].isalnum() or line[j] in {"_", "-"}):
+                    # allow alphanumerics and [_-]
+                    if not (line[j].isalnum() or line[j] in "_-"):
                         break
                 else:
                     throw_parsing_error("missing parameters", line, n, j)
@@ -308,17 +309,17 @@ if arguments.template != "":
 # make note of the generated files to remove them after the conversions
 generated_files = []
 
-try:
-    # go through the specified markdown files
-    for md_file_name in arguments.files:
+# go through the specified markdown files
+for md_file_name in arguments.files:
+    try:
         # get the name of the folder and the name of the file (for a status message)
         folder, file_name = map(
             os.path.basename, (os.path.split(os.path.abspath(md_file_name)))
         )
 
         # read the markdown file
+        print_message(f"Reading '{folder}{os.path.sep}{file_name}':")
         with open(md_file_name, "r") as f:
-            print_message(f"Reading '{folder}{os.path.sep}{file_name}':")
             contents = f.read()
 
             if arguments.embed_xopp_files:
@@ -360,7 +361,7 @@ try:
         print_message("- generating resulting PDF...")
 
         # create a dummy .md file for the conversion
-        dummy_file_name = f"{generate_random_hex_number(10)}.md"
+        dummy_file_name = f"{generate_random_hex_number(20)}.md"
         with open(dummy_file_name, "w") as f:
             f.write(contents)
 
@@ -373,16 +374,25 @@ try:
         )
 
         print_message()
-
-except CommandError as e:
-    print(f"{e}\n")
+    except FileNotFoundError:
+        print("- file not found, skipping")
+    except IsADirectoryError:
+        print("- file is a directory, skipping")
+    except UnicodeDecodeError:
+        print("- file is not UTF-8, skipping")
+    except CommandError as e:
+        print(e)
+    except Exception:
+        print("- an error occurred when reading the file, skipping")
 
 
 # clean-up after the script is done
 if arguments.cleanup:
-    print_message("Cleaning up...")
+    if len(generated_files) == 0:
+        print_message("Nothing to clean, done!")
+    else:
+        print_message("Cleaning up...")
+        for f in generated_files:
+            os.remove(f)
 
-    for f in generated_files:
-        os.remove(f)
-
-print_message("Done!")
+        print_message("Done!")
