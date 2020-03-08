@@ -190,9 +190,12 @@ def get_ongoing_course() -> Union[Course, None]:
 def get_course_from_argument(argument: str) -> List[Course]:
     """Returns all courses that match the format name-[type] or abbreviation-[type].
     Examples: of valid identifiers (1st semester): ups-c, la, la-p, dm-c."""
+    # special case for no argument at all
+    if argument is None:
+        return get_ongoing_course() or get_course_from_argument("next")
 
     # special case for 'next'
-    if argument == "next":
+    if argument in ("n", "next"):
         today = datetime.today()
 
         MID = 1440  # minutes in a day
@@ -322,7 +325,7 @@ def list_finals():
     # get courses that have finals records in them
     finals_courses = [c for c in get_sorted_courses() if c.finals is not None]
     if len(finals_courses) == 0:
-        sys.exit("No finals added (just you wait)!")
+        sys.exit("No finals added!")
 
     # build a table
     finals = [["Finals!"]]
@@ -405,16 +408,18 @@ def list_courses(option=""):
                 ]
             )
 
-    table.append(["Nerozvrženo"])
-    for course in unscheduled:
-        table.append(
-            [
-                course.name if not short else course.abbreviation,
-                course.type[0],
-                "-",
-                "-",
-            ]
-        )
+    # list unscheduled courses only when no options are specified
+    if option == "" and len(unscheduled) != 0:
+        table.append(["Nerozvrženo"])
+        for course in unscheduled:
+            table.append(
+                [
+                    course.name if not short else course.abbreviation,
+                    course.type[0],
+                    "-",
+                    "-",
+                ]
+            )
 
     # if no courses were added since the days didn't match, exit with a message
     if len(table) == 0:
@@ -478,14 +483,64 @@ def open_in_xournalpp(path: str):
     Popen(["xournalpp", path], stdout=DEVNULL, stderr=DEVNULL)
 
 
+def check_all_websites():
+    """Update caches of all course websites."""
+    print("Updating course website caches:")
+
+    for course in get_sorted_courses():
+        if course.website is not None:
+            print(f"- updating {course.name} ({course.type})...")
+            course.update_website_cache()
+        else:
+            print(f"- skipping {course.name} ({course.type}) -- no website")
+
+
+def check_course_website(argument: Union[str, None] = None):
+    """Checks, whether the source code of the website matches the one cached. If yes,
+    let the user know. If not, print the diff and update the cache."""
+    courses = get_course_from_argument(argument)
+
+    if len(courses) == 0:
+        sys.exit("No course matching the criteria.")
+
+    elif len(courses) > 1 and not all(
+        [courses[i].website == courses[i + 1].website for i in range(len(courses) - 1)]
+    ):
+        sys.exit("Multiple courses matching the identifier.")
+
+    elif courses[0].website is None:
+        sys.exit("The course has no website.")
+
+    # get the current and the cached source code
+    cached_code = courses[0].get_website_cache()
+    current_code = courses[0].get_website_source_code()
+
+    # update the cache
+    courses[0].update_website_cache()
+    if cached_code is None:
+        sys.exit("Cache file created.")
+    else:
+        # if there hasn't been any changes, say so
+        if cached_code == current_code:
+            # get time modified in a readable format
+            mtime = os.path.getmtime(courses[0].website_cache_path())
+            mtime_string = datetime.fromtimestamp(mtime).strftime("%-d. %-m. %Y")
+
+            sys.exit(f"No updates since {mtime_string}.")
+
+        # else print the changes diff
+        else:
+            Popen(
+                [f"diff '{courses[0].website_cache_path()}' - -u --color=always"],
+                stdin=PIPE,
+                shell=True,
+            ).communicate(current_code.encode())
+
+
 def open_course(kind: str, argument: Union[str, None] = None):
     """Open the course's something."""
     # if no argument is specified, default to getting the current or the next course
-    if argument is None:
-        course = get_ongoing_course()
-        courses = get_course_from_argument("next") if course is None else [course]
-    else:
-        courses = get_course_from_argument(argument)
+    courses = get_course_from_argument(argument)
 
     # if none were found
     if len(courses) == 0:
