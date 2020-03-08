@@ -1,12 +1,14 @@
 import sys
 import os
 from yaml import safe_load, YAMLError
-from subprocess import call, Popen, DEVNULL
+from subprocess import call, Popen, DEVNULL, PIPE
 from datetime import timedelta, datetime, date, timezone
 from typing import *
 from dataclasses import *
 from functools import partial
 from unidecode import unidecode
+from urllib.request import urlopen
+
 
 # catch SIGINT and prevent it from terminating the script, since an instance of Ranger
 # might be running and it crashes when called using subprocess. Popen (might be related
@@ -111,6 +113,36 @@ class Course(Strict):
             )
         )
 
+    def get_website_source_code(self) -> Union[str, None]:
+        """Return the source code of the website of the course. If it doesn't have a
+        website then throw an exception."""
+        return urlopen(self.website).read().decode("utf-8")
+
+    def website_cache_path(self) -> str:
+        """Return the path to the website cache."""
+        return os.path.join(self.path(), ".school")
+
+    def update_website_cache(self):
+        """Update the website source code (if it has a website)."""
+        source_code = self.get_website_source_code()
+
+        if source_code is not None:
+            with open(self.website_cache_path(), "w") as f:
+                f.write(source_code)
+
+    def get_website_cache(self) -> Union[str, None]:
+        """Get the cached code for the course website or None if it has not yet been
+        initialized."""
+        cache_path = self.website_cache_path()
+
+        # if it doesn't yet exist, return None
+        if not os.path.isfile(cache_path):
+            return
+
+        # else return its contents
+        else:
+            return open(cache_path, "r").read()
+
     @classmethod
     def from_dictionary(cls, d: Dict):
         """Initialize a Course object from the given dictionary."""
@@ -150,7 +182,7 @@ def minutes_to_HHMM(minutes: int) -> str:
 
 def get_ongoing_course() -> Union[Course, None]:
     """Returns the currently ongoing course (or None if there is no ongoing course)."""
-    for course in get_sorted_courses():
+    for course in get_sorted_courses(include_unscheduled=False):
         if course.is_ongoing():
             return course
 
@@ -170,7 +202,7 @@ def get_course_from_argument(argument: str) -> List[Course]:
         min_time, min_course = float("+inf"), None
 
         # TODO: do binary search
-        for course in get_sorted_courses():
+        for course in get_sorted_courses(include_unscheduled=False):
             time_to_course = (
                 (course.time.start + course.weekday() * MID) - current_week_time
             ) % MIW
@@ -190,7 +222,7 @@ def get_course_from_argument(argument: str) -> List[Course]:
     # courses that were parsed as if the argument was an abbreviation
     abbr_courses = [
         course
-        for course in get_sorted_courses(True)
+        for course in get_sorted_courses()
         if abbr == course.abbreviation.lower() and type in {None, course.type[0]}
     ]
 
@@ -200,7 +232,7 @@ def get_course_from_argument(argument: str) -> List[Course]:
         if len(abbr_courses) != 0
         else [
             course
-            for course in get_sorted_courses(True)
+            for course in get_sorted_courses()
             if unidecode(course.name.lower()).startswith(unidecode(abbr.lower()))
             and type in {None, course.type[0]}
         ]
@@ -288,7 +320,7 @@ def get_sorted_courses(include_unscheduled=False) -> List[Course]:
 def list_finals():
     """Lists dates of all finals."""
     # get courses that have finals records in them
-    finals_courses = [c for c in get_sorted_courses(True) if c.finals is not None]
+    finals_courses = [c for c in get_sorted_courses() if c.finals is not None]
     if len(finals_courses) == 0:
         sys.exit("No finals added (just you wait)!")
 
@@ -317,7 +349,7 @@ def list_finals():
 
 def list_courses(option=""):
     """Lists information about the courses."""
-    courses = get_sorted_courses(True)
+    courses = get_sorted_courses()
 
     current_day = datetime.today()
     current_weekday = current_day.weekday()
@@ -508,7 +540,7 @@ def compile_notes() -> None:
     """Runs md_to_pdf script on all of the courses."""
     base = os.path.dirname(os.path.realpath(__file__))
 
-    for path in map(lambda c: c.path(), get_sorted_courses(True)):
+    for path in map(lambda c: c.path(), get_sorted_courses()):
         os.chdir(os.path.join(base, path))
         call(["fish", "-c", "md_to_pdf -a -t"])
 
@@ -520,7 +552,7 @@ def compile_cron_jobs() -> None:
         call(["sudo", "python3", *sys.argv])
         sys.exit()
 
-    courses = get_sorted_courses()
+    courses = get_sorted_courses(include_unscheduled=False)
 
     cron_file = "/etc/crontab"
     user = os.getlogin()
@@ -613,6 +645,13 @@ decision_tree = {
         partial(open_in_ranger, os.path.dirname(os.path.abspath(__file__))),
         "Open the course directory in Ranger.",
     ),
+    ("check",): {
+        ("all",): (check_all_websites, "Update all website caches."),
+        ("course",): (
+            check_course_website,
+            "Check, whether the course website has changed.",
+        ),
+    },
     ("open",): {
         ("folder", "course"): (
             partial(open_course, "folder"),
