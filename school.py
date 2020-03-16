@@ -194,7 +194,8 @@ def get_course_from_argument(argument: str) -> List[Course]:
     Examples: of valid identifiers (1st semester): ups-c, la, la-p, dm-c."""
     # special case for no argument at all
     if argument is None:
-        return get_ongoing_course() or get_course_from_argument("next")
+        ongoing = get_ongoing_course()
+        return [ongoing] if ongoing is not None else get_course_from_argument("next")
 
     # special case for 'next'
     if argument in ("n", "next"):
@@ -689,7 +690,7 @@ def compile_cron_jobs() -> None:
         # cut whatever is left
         f.truncate()
 
-        print(f"Course messaged generated and saved to {cron_file}.")
+        print(f"Course messages generated and saved to {cron_file}.")
 
 
 def list_help(tree: Dict, indentation: int) -> None:
