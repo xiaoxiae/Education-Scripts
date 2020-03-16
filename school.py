@@ -28,7 +28,7 @@ class Strict:
             value = self.__dict__[name]
 
             # ignore None values and Any types
-            if value is None or get_origin(field_type) is Any:
+            if value is None or field_type is Any:
                 continue
 
             # go through all of the field types and check the types
@@ -90,6 +90,8 @@ class Course(Strict):
 
     website: str = None
     finals: Finals = None
+
+    other: Any = None
 
     def is_ongoing(self) -> bool:
         """Returns True if the course is ongoing and False if not."""
@@ -348,6 +350,28 @@ def list_finals():
         )
 
     print_table(finals)
+
+
+def list_attribute(argument, attribute=""):
+    "List the given course attribute."
+    courses = get_course_from_argument(argument)
+
+    if len(courses) == 0:
+        sys.exit("No course matching the criteria.")
+    elif len(courses) != 1:
+        sys.exit("Multiple courses matching the identifier.")
+    else:
+        # print the whole course if the attribute was not specified
+        if attribute == "":
+            print(courses[0])
+
+        # else only the specific attribute
+        else:
+            print(
+                "The course does not contain this attribute."
+                if not hasattr(courses[0], attribute)
+                else getattr(courses[0], attribute)
+            )
 
 
 def list_courses(option=""):
@@ -689,6 +713,7 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 decision_tree = {
     ("list",): {
         ("courses",): (list_courses, "List information about the courses."),
+        ("attribute",): (list_attribute, "List the given course attribute."),
         ("finals",): (list_finals, "List dates of all finals."),
         ("timeline",): (list_timeline, "List the courses in a timeline."),
     },
