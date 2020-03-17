@@ -353,6 +353,51 @@ def list_finals():
     print_table(finals)
 
 
+def list_timeline():
+    """List the courses in a timeline."""
+    start_hour = 9  # 9 AM
+    end_hour = 21  # 20 PM (not inclusive)
+
+    hours = end_hour - start_hour  # number of hours in a day
+    beginning_minutes = start_hour * 60  # minutes from 0:00 to <start_hour>:00
+
+    courses = get_sorted_courses(include_unscheduled=False)
+
+    # print the header
+    print("╭" + "─" * (hours * 6 + 1) + "╮", end="\n│")
+    for i in range(hours):
+        print(minutes_to_HHMM(beginning_minutes + 60 * i).rjust(6, " "), end="")
+    print(" │\n├" + "─" * (hours * 6 + 1) + "┤\n│", end="")
+
+    for i in range(len(courses)):
+        # check for new lines
+        if i != 0 and courses[i].weekday() != courses[i - 1].weekday():
+            # the space padding after end of the previous course
+            prev_course_padding = (end_hour * 60 - courses[i - 1].time.end) // 10
+            print(" " * (prev_course_padding + 1) + "│\n│", end="")
+
+        # the wait period between this and the previous course
+        wait = (
+            courses[i].time.start
+            - (
+                courses[i - 1].time.end
+                if courses[i - 1].weekday() == courses[i].weekday()
+                else beginning_minutes
+            )
+        ) // 10
+
+        ongoing = (courses[i].time.end - courses[i].time.start) // 10
+
+        print(f"{' ' * wait}({courses[i].abbreviation.center(ongoing - 2)})", end="")
+
+    # the space padding after the very last course
+    prev_course_padding = (end_hour * 60 - courses[-1].time.end) // 10
+    print(" " * (prev_course_padding + 1) + "│")
+
+    # footer
+    print("╰" + "─" * (hours * 6 + 1) + "╯")
+
+
 def list_attribute(argument, attribute=""):
     "List the given course attribute."
     courses = get_course_from_argument(argument)
