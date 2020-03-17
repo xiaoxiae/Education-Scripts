@@ -568,6 +568,9 @@ def check_all_websites():
 def check_course_website(argument: Union[str, None] = None):
     """Checks, whether the source code of the website matches the one cached. If yes,
     let the user know. If not, print the diff and update the cache."""
+    if argument == "all":
+        check_all_websites()
+
     courses = get_course_from_argument(argument)
 
     if len(courses) == 0:
@@ -586,7 +589,6 @@ def check_course_website(argument: Union[str, None] = None):
     current_code = courses[0].get_website_source_code()
 
     # update the cache
-    courses[0].update_website_cache()
     if cached_code is None:
         sys.exit("Cache file created.")
     else:
@@ -605,6 +607,8 @@ def check_course_website(argument: Union[str, None] = None):
                 stdin=PIPE,
                 shell=True,
             ).communicate(current_code.encode())
+
+    courses[0].update_website_cache()
 
 
 def open_course(kind: str, argument: Union[str, None] = None):
@@ -771,13 +775,10 @@ decision_tree = {
         partial(open_in_ranger, os.path.dirname(os.path.abspath(__file__))),
         "Open the course directory in Ranger.",
     ),
-    ("check",): {
-        ("all",): (check_all_websites, "Update all website caches."),
-        ("course",): (
-            check_course_website,
-            "Check, whether the course website has changed.",
-        ),
-    },
+    ("check",): (
+        check_course_website,
+        "Check, whether the course website has changed.",
+    ),
     ("open",): {
         ("folder", "course"): (
             partial(open_course, "folder"),
