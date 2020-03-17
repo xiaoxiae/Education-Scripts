@@ -358,8 +358,12 @@ def list_timeline():
     start_hour = 9  # 9 AM
     end_hour = 21  # 20 PM (not inclusive)
 
-    hours = end_hour - start_hour  # number of hours in a day
+    interval = 100
+
     beginning_minutes = start_hour * 60  # minutes from 0:00 to <start_hour>:00
+
+    total_minutes = ((end_hour * 60 - beginning_minutes) // interval + 1) * interval
+    number_of_intervals = total_minutes // interval
 
     # separate courses based on weekdays
     days = [[] for _ in range(5)]
@@ -367,35 +371,49 @@ def list_timeline():
         days[course.weekday()].append(course)
 
     # print the header
-    print("╭" + "─" * (hours * 6 + 1) + "╮", end="\n│")
-    for i in range(hours):
-        print(minutes_to_HHMM(beginning_minutes + 60 * i).rjust(6, " "), end="")
-    print(" │\n├" + "─" * (hours * 6 + 1) + "┤\n", end="")
+    print(
+        ("╭" + "─" * (total_minutes // 10) + "╮\n│")
+        + "".join(
+            minutes_to_HHMM(beginning_minutes + interval * i).strip().ljust(10, " ")
+            for i in range(number_of_intervals)
+        )
+        + "│\n├─"
+        + "".join(
+            "─" * (number_of_intervals + 1)
+            + ("┬" if i != number_of_intervals - 1 else "┤")
+            for i in range(number_of_intervals)
+        )
+    )
 
+    # a buffer for adding course line strings
     print_buffer = ["" for _ in range(len(days))]
-
     for i, day in enumerate(days):
         print_buffer[i] += "│"
 
         for j, course in enumerate(day):
             prev_course = days[i][j - 1]
 
-            wait = (
-                course.time.start
-                - (beginning_minutes if j == 0 else prev_course.time.end)
-            ) // 10
+            # duration before course start
+            if j == 0:
+                wait = (course.time.start - beginning_minutes) // 10
+            else:
+                wait = (course.time.start - prev_course.time.end) // 10
+
             duration = (course.time.end - course.time.start) // 10
 
             print_buffer[i] += (
-                " " * wait + "(" + course.abbreviation.center(duration - 2) + ")"
+                " " * wait + "{" + course.abbreviation.center(duration - 2) + "}"
             )
 
             # last course padding after
             if j == len(day) - 1:
-                print_buffer[i] += " " * ((end_hour * 60 - course.time.end) // 10 + 1)
+                print_buffer[i] += " " * (
+                    (beginning_minutes + total_minutes - course.time.end) // 10
+                )
 
         print_buffer[i] += "│"
 
+    # add current position, overriding whatever there was in the buffer
     now = datetime.now()
 
     weekday = now.weekday()
@@ -405,12 +423,29 @@ def list_timeline():
         print_buffer[weekday][:offset] + "#" + print_buffer[weekday][offset + 1 :]
     )
 
+    # add vertical lines
+    for i in range(len(print_buffer)):
+        for j in range(1, number_of_intervals):
+            if print_buffer[i][(j * interval) // 10 + 1] == " ":
+                print_buffer[i] = (
+                    print_buffer[i][: (j * interval) // 10 + 1]
+                    + "│"
+                    + print_buffer[i][(j * interval) // 10 + 2 :]
+                )
+
     # print the buffer
     for line in print_buffer:
         print(line)
 
-    # footer
-    print("╰" + "─" * (hours * 6 + 1) + "╯")
+    # print the very last line
+    print(
+        "╰─"
+        + "".join(
+            "─" * (number_of_intervals + 1)
+            + ("┴" if i != number_of_intervals - 1 else "╯")
+            for i in range(number_of_intervals)
+        )
+    )
 
 
 def list_attribute(argument, attribute=""):
