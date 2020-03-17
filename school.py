@@ -402,7 +402,12 @@ def list_timeline():
             duration = (course.time.end - course.time.start) // 10
 
             print_buffer[i] += (
-                " " * wait + "{" + course.abbreviation.center(duration - 2) + "}"
+                " " * wait
+                + "{"
+                + (course.abbreviation + "-" + course.type[0])
+                .upper()
+                .center(duration - 2)
+                + "}"
             )
 
             # last course padding after
@@ -419,9 +424,10 @@ def list_timeline():
     weekday = now.weekday()
     offset = (now.hour * 60 + now.minute - beginning_minutes) // 10 + 1
 
-    print_buffer[weekday] = (
-        print_buffer[weekday][:offset] + "#" + print_buffer[weekday][offset + 1 :]
-    )
+    if offset > 0:
+        print_buffer[weekday] = (
+            print_buffer[weekday][:offset] + "#" + print_buffer[weekday][offset + 1 :]
+        )
 
     # add vertical lines
     for i in range(len(print_buffer)):
