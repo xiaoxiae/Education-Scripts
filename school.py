@@ -361,38 +361,53 @@ def list_timeline():
     hours = end_hour - start_hour  # number of hours in a day
     beginning_minutes = start_hour * 60  # minutes from 0:00 to <start_hour>:00
 
-    courses = get_sorted_courses(include_unscheduled=False)
+    # separate courses based on weekdays
+    days = [[] for _ in range(5)]
+    for course in get_sorted_courses(include_unscheduled=False):
+        days[course.weekday()].append(course)
 
     # print the header
     print("╭" + "─" * (hours * 6 + 1) + "╮", end="\n│")
     for i in range(hours):
         print(minutes_to_HHMM(beginning_minutes + 60 * i).rjust(6, " "), end="")
-    print(" │\n├" + "─" * (hours * 6 + 1) + "┤\n│", end="")
+    print(" │\n├" + "─" * (hours * 6 + 1) + "┤\n", end="")
 
-    for i in range(len(courses)):
-        # check for new lines
-        if i != 0 and courses[i].weekday() != courses[i - 1].weekday():
-            # the space padding after end of the previous course
-            prev_course_padding = (end_hour * 60 - courses[i - 1].time.end) // 10
-            print(" " * (prev_course_padding + 1) + "│\n│", end="")
+    print_buffer = ["" for _ in range(len(days))]
 
-        # the wait period between this and the previous course
-        wait = (
-            courses[i].time.start
-            - (
-                courses[i - 1].time.end
-                if courses[i - 1].weekday() == courses[i].weekday()
-                else beginning_minutes
+    for i, day in enumerate(days):
+        print_buffer[i] += "│"
+
+        for j, course in enumerate(day):
+            prev_course = days[i][j - 1]
+
+            wait = (
+                course.time.start
+                - (beginning_minutes if j == 0 else prev_course.time.end)
+            ) // 10
+            duration = (course.time.end - course.time.start) // 10
+
+            print_buffer[i] += (
+                " " * wait + "(" + course.abbreviation.center(duration - 2) + ")"
             )
-        ) // 10
 
-        ongoing = (courses[i].time.end - courses[i].time.start) // 10
+            # last course padding after
+            if j == len(day) - 1:
+                print_buffer[i] += " " * ((end_hour * 60 - course.time.end) // 10 + 1)
 
-        print(f"{' ' * wait}({courses[i].abbreviation.center(ongoing - 2)})", end="")
+        print_buffer[i] += "│"
 
-    # the space padding after the very last course
-    prev_course_padding = (end_hour * 60 - courses[-1].time.end) // 10
-    print(" " * (prev_course_padding + 1) + "│")
+    now = datetime.now()
+
+    weekday = now.weekday()
+    offset = (now.hour * 60 + now.minute - beginning_minutes) // 10 + 1
+
+    print_buffer[weekday] = (
+        print_buffer[weekday][:offset] + "#" + print_buffer[weekday][offset + 1 :]
+    )
+
+    # print the buffer
+    for line in print_buffer:
+        print(line)
 
     # footer
     print("╰" + "─" * (hours * 6 + 1) + "╯")
