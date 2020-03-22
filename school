@@ -426,7 +426,7 @@ def list_timeline():
     weekday = now.weekday()
     offset = (now.hour * 60 + now.minute - beginning_minutes) // 10 + 1
 
-    if offset > 0:
+    if offset > 0 and 0 <= weekday < len(print_buffer):
         print_buffer[weekday] = (
             print_buffer[weekday][:offset] + "#" + print_buffer[weekday][offset + 1 :]
         )
@@ -623,9 +623,41 @@ def check_all_websites():
             print(f"- skipping {course.name} ({course.type}) -- no website")
 
 
+def browse_course(argument: Union[str, None] = None):
+    "Run 'fzf' on the course folder, returning the match."
+    # if none are specified, list all files of all folders
+    # needs to be explicit
+    if argument is None:
+        courses = get_sorted_courses()
+    else:
+        courses = get_course_from_argument(argument)
+
+    if len(courses) == 0:
+        sys.exit("No course matching the criteria.")
+    else:
+        course_paths = [os.path.abspath(c.path()) for c in courses]
+
+        # move to the most common prefix of the courses
+        os.chdir(os.path.commonprefix(course_paths))
+
+        # get whatever the user selected using fzf
+        result = Popen(
+            ["find . | fzf"],
+            stdin=PIPE,
+            stdout=PIPE,
+            shell=True,
+        ).communicate()[0].decode("utf-8")
+
+        if result != "":
+            print(os.path.abspath(result).strip())
+
+
 def check_course_website(argument: Union[str, None] = None):
     """Checks, whether the source code of the website matches the one cached. If yes,
     let the user know. If not, print the diff and update the cache."""
+    if argument is None:
+        exit("The argument has to be either 'all', or a course name.")
+
     if argument == "all":
         check_all_websites()
 
@@ -833,6 +865,7 @@ decision_tree = {
         partial(open_in_ranger, os.path.dirname(os.path.abspath(__file__))),
         "Open the course directory in Ranger.",
     ),
+    ("browse",): (browse_course, "Run 'fzf' on the course folder, returning the match.",),
     ("check",): (
         check_course_website,
         "Check, whether the course website has changed.",
