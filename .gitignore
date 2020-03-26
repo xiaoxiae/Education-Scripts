@@ -8,3 +8,6 @@ __pycache__/
 
 # ignore the current semester, since it will frequently change
 aktuální semestr
+
+# also ignore private config
+private_config.py

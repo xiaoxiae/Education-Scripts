@@ -11,6 +11,10 @@ from functools import partial
 from unidecode import unidecode
 from urllib.request import urlopen
 
+# import configuration files for the script
+from config import *
+from private_config import *
+
 
 # catch SIGINT and prevent it from terminating the script, since an instance of Ranger
 # might be running and it crashes when called using subprocess. Popen (might be related
@@ -18,6 +22,21 @@ from urllib.request import urlopen
 from signal import signal, SIGINT
 
 signal(SIGINT, lambda _, __: None)
+
+
+### GLOBAL VARIABLES ###
+# change path to current folder for the script to work
+# remember it, though, since we might need it
+cwd = os.getcwd()
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
+
+# weekday constants
+WD_EN = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+WD_CZ = ("pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota", "neděle")
+
+# flags
+short = False
+
 
 ### DATACLASSES PRESCRIBING THE YAML SYNTAX ###
 @dataclass
@@ -162,16 +181,52 @@ class Course(Strict):
         else:
             return d
 
+    @classmethod
+    def from_path(cls, path: str):
+        """Initialize a Course object from anywhere within its path."""
+        # remember the file (to read from)
+        directory = os.path.dirname(os.path.join(cwd, path))
 
-### GLOBAL VARIABLES ###
-courses_folder = "aktuální semestr/"
+        while directory != os.path.dirname(directory):
+            for f in os.listdir(directory):
+                if f.endswith(".yaml"):
+                    course = Course.from_file(os.path.join(directory, f))
+            else:
+                directory = os.path.dirname(directory)
+                continue
+            break
+        
+        return course
 
-# weekday constants
-WD_EN = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sundnay")
-WD_CZ = ("pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota", "neděle")
 
-# flags
-short = False
+    @classmethod
+    def from_file(cls, path: str):
+        """Initialize a Course object from the path to its .yaml dictionary."""
+        with open(path, "r") as f:
+            try:
+                # descend 2 levels down, getting the name of the course directory
+                # not pretty but works
+                root = path
+                for _ in range(3):
+                    root = os.path.dirname(root)
+                shortened_path = path[len(root)  + 1:]
+
+                course_name = shortened_path[: shortened_path.index(os.sep)]
+                course_abbreviation = course_name[course_name.rfind(" ") :][2:-1]
+
+                shortened_path = shortened_path[len(course_name) + 1 :]
+                course_type = shortened_path[: shortened_path.index(os.sep)]
+
+                course_dict = safe_load(f) or {}
+                course_dict["name"] = course_name[: course_name.rfind(" ")]
+                course_dict["type"] = course_type
+                course_dict["abbreviation"] = course_abbreviation
+
+                return Course.from_dictionary(course_dict)
+            except (YAMLError, TypeError) as e:
+                sys.exit(f"ERROR in {path}: {e}")
+            except KeyError as e:
+                sys.exit(f"ERROR in {path}: Invalid key {e}.")
 
 
 def get_cron_schedule(time: int, day: int) -> str:
@@ -292,34 +347,17 @@ def get_sorted_courses(include_unscheduled=False) -> List[Course]:
     ignores courses without a schedule by default."""
     courses = []
 
+    # find all .yaml files in the school path
     for root, _, filenames in os.walk(courses_folder):
         for filename in filter(lambda f: f.endswith(".yaml"), filenames):
-            path = os.path.join(root, filename)
+            # initialize a course from the path
+            course = Course.from_file(os.path.join(root, filename))
 
-            with open(path, "r") as f:
-                try:
-                    # get the name and the type from the course folder path
-                    # removes the duplicity while keeping things organized
-                    shortened_path = path[len(courses_folder) :]
-                    course_name = shortened_path[: shortened_path.index(os.sep)]
-                    course_abbreviation = course_name[course_name.rfind(" ") :][2:-1]
+            # either it's a normal or an unscheduled course
+            if course.time is not None or include_unscheduled:
+                courses.append(course)
 
-                    shortened_path = shortened_path[len(course_name) + 1 :]
-                    course_type = shortened_path[: shortened_path.index(os.sep)]
-
-                    course_dict = safe_load(f) or {}
-                    course_dict["name"] = course_name[: course_name.rfind(" ")]
-                    course_dict["type"] = course_type
-                    course_dict["abbreviation"] = course_abbreviation
-
-                    # either it's a normal or an unscheduled course
-                    if "time" in course_dict or include_unscheduled:
-                        courses.append(Course.from_dictionary(course_dict))
-                except (YAMLError, TypeError) as e:
-                    sys.exit(f"ERROR in {path}: {e}")
-                except KeyError as e:
-                    sys.exit(f"ERROR in {path}: Invalid key {e}.")
-
+    # sort by time
     return sorted(
         courses, key=lambda c: (0, 0) if not c.time else (c.weekday(), c.time.start)
     )
@@ -641,15 +679,100 @@ def browse_course(argument: Union[str, None] = None):
         os.chdir(os.path.commonprefix(course_paths))
 
         # get whatever the user selected using fzf
-        result = Popen(
-            ["find . | fzf"],
-            stdin=PIPE,
-            stdout=PIPE,
-            shell=True,
-        ).communicate()[0].decode("utf-8")
+        result = (
+            Popen(["find . | fzf"], stdin=PIPE, stdout=PIPE, shell=True,)
+            .communicate()[0]
+            .decode("utf-8")
+        )
 
         if result != "":
             print(os.path.abspath(result).strip())
+
+
+def send_mail(file_name: str):
+    """Send an email to the email associated with the course."""
+    course = Course.from_path(file_name)
+    
+    if course is None:
+        sys.exit("Current working directory is not in a course directory.")
+
+    if course.teacher is None:
+        sys.exit("The course has no teacher to send the email to.")
+
+    if course.teacher.email is None:
+        sys.exit("The course has no email address.")
+
+    import smtplib, ssl
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.application import MIMEApplication
+    from email.mime.text import MIMEText
+
+    print("Reading the configuration file...")
+    configuration = {}
+    latest_attribute = None
+
+    config_path = os.path.join(cwd, file_name)
+
+    for i, line in enumerate(open(config_path)):
+        # tabs are multi-line attributes
+        if line.startswith("\t"):
+            if latest_attribute is None:
+                sys.exit(f"Expected attribute before tab:\n{i}: {line}")
+            configuration[latest_attribute] += line.strip() + "\n"
+            continue
+
+        # skip empty lines
+        if len(line.strip()) == 0:
+            continue
+
+        if ":" not in line:
+            sys.exit(f"Malformed line (missing ':'):\n{i}: {line}")
+
+        attribute, value = line[:line.find(":")].strip().lower(), line[line.find(":") + 1:].strip()
+
+        configuration[attribute] = value
+        latest_attribute = attribute
+
+    print("Composing the message...")
+    message = MIMEMultipart()
+    message["From"] = smtp_from
+    message["To"] = course.teacher.email
+
+    for required in {"subject", "body", "attachments"}:
+        if required not in configuration:
+            sys.exit(f"{required.capitalize()} not read!")
+
+    message["Subject"] = configuration["subject"]
+    message.attach(MIMEText(configuration["body"]))
+
+    for attachment in map(lambda x: x.strip(), configuration["attachments"].split()):
+        extension = attachment.split(".")[-1]
+        attachment_path = os.path.join(os.path.dirname(config_path), attachment)
+
+        if not os.path.exists(attachment_path):
+            sys.exit(f"Attachment '{attachment}' missing!")
+
+        att = MIMEApplication(open(attachment_path, "rb").read())
+        att.add_header("content-disposition", "attachment", filename=attachment)
+        message.attach(att)
+
+    print(f"Sending mail to '{course.teacher.email}'.")
+    while (answer := input("Yes/no: ")):
+        if answer == "yes":
+            break
+        else:
+            sys.exit("Aborting.")
+
+    print("Connecting to the SMPT server...")
+    try:
+        smtp_server = smtplib.SMTP_SSL(smtp_address, smtp_port)
+        smtp_server.login(smtp_login, smtp_password)
+        smtp_server.send_message(message)
+    except Exception as e:
+        exit(f"Something went wrong when connecting to the SMTP server: {e}")
+
+
+    smtp_server.close()
 
 
 def check_course_website(argument: Union[str, None] = None):
@@ -846,10 +969,6 @@ def list_help(tree: Dict, indentation: int) -> None:
             print(decision)
             list_help(v, indentation + 1)
 
-
-# change path to current folder for the script to work
-os.chdir(os.path.dirname(os.path.realpath(__file__)))
-
 decision_tree = {
     ("list",): {
         ("courses",): (list_courses, "List information about the courses."),
@@ -865,11 +984,15 @@ decision_tree = {
         partial(open_in_ranger, os.path.dirname(os.path.abspath(__file__))),
         "Open the course directory in Ranger.",
     ),
-    ("browse",): (browse_course, "Run 'fzf' on the course folder, returning the match.",),
+    ("browse",): (
+        browse_course,
+        "Run 'fzf' on the course folder, returning the match.",
+    ),
     ("check",): (
         check_course_website,
         "Check, whether the course website has changed.",
     ),
+    ("send",): (send_mail, "Send an email to the email of the course."),
     ("open",): {
         ("folder", "course"): (
             partial(open_course, "folder"),
