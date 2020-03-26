@@ -395,14 +395,12 @@ def list_finals():
 
 def list_timeline():
     """List the courses in a timeline."""
-    start_hour = 9  # 9 AM
-    end_hour = 21  # 20 PM (not inclusive)
+    beginning_minutes = int(7.34 * 60)  # starting time is 7:20
+    end_minutes = int(21 * 60)
 
-    interval = 100
+    interval = 100  # 100 minutes for each period (90 + 10)
 
-    beginning_minutes = start_hour * 60  # minutes from 0:00 to <start_hour>:00
-
-    total_minutes = ((end_hour * 60 - beginning_minutes) // interval + 1) * interval
+    total_minutes = ((end_minutes - beginning_minutes) // interval + 1) * interval
     number_of_intervals = total_minutes // interval
 
     # separate courses based on weekdays
@@ -419,8 +417,7 @@ def list_timeline():
         )
         + "│\n├─"
         + "".join(
-            "─" * (number_of_intervals + 1)
-            + ("┬" if i != number_of_intervals - 1 else "┤")
+            "─" * (number_of_intervals) + ("┬" if i != number_of_intervals - 1 else "┤")
             for i in range(number_of_intervals)
         )
     )
@@ -441,14 +438,12 @@ def list_timeline():
 
             duration = (course.time.end - course.time.start) // 10
 
-            print_buffer[i] += (
-                " " * wait
-                + "{"
-                + (course.abbreviation + "-" + course.type[0])
-                .upper()
-                .center(duration - 2)
-                + "}"
-            )
+            # python's .center aligns right and it looks ugly
+            name = (course.abbreviation + "-" + course.type[0]).upper()
+            if len(name) % 2 == 0:
+                name += " "
+
+            print_buffer[i] += " " * wait + "{" + name.center(duration - 2) + "}"
 
             # last course padding after
             if j == len(day) - 1:
@@ -487,8 +482,7 @@ def list_timeline():
     print(
         "╰─"
         + "".join(
-            "─" * (number_of_intervals + 1)
-            + ("┴" if i != number_of_intervals - 1 else "╯")
+            "─" * (number_of_intervals) + ("┴" if i != number_of_intervals - 1 else "╯")
             for i in range(number_of_intervals)
         )
     )
