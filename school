@@ -2,22 +2,24 @@
 
 import sys
 import os
-from yaml import safe_load, YAMLError
-from subprocess import call, Popen, DEVNULL, PIPE
-from datetime import timedelta, datetime, date, timezone
+from subprocess import call, Popen, PIPE
+from datetime import timedelta, datetime, date
 from typing import *
-from dataclasses import *
 from functools import partial
 from unidecode import unidecode
-from urllib.request import urlopen
 
-# import configuration files for the script
+# configuration
 from config import *
 from private_config import *
 
+from course import Course
+from util import *
+
+import md_to_pdf.md_to_pdf
+
 
 # catch SIGINT and prevent it from terminating the script, since an instance of Ranger
-# might be running and it crashes when called using subprocess. Popen (might be related
+# might be running and it crashes when called using subprocess.Popen (might be related
 # to https://github.com/ranger/ranger/issues/898)
 from signal import signal, SIGINT
 
@@ -30,212 +32,8 @@ signal(SIGINT, lambda _, __: None)
 cwd = os.getcwd()
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
-# weekday constants
-WD_EN = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
-WD_CZ = ("pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota", "neděle")
-
 # flags
 short = False
-
-
-### DATACLASSES PRESCRIBING THE YAML SYNTAX ###
-@dataclass
-class Strict:
-    """A class for strictly checking whether each of the dataclass variable types match."""
-
-    def __post_init__(self):
-        """Perform the check."""
-        for name, field_type in self.__annotations__.items():
-            value = self.__dict__[name]
-
-            # ignore None values and Any types
-            if value is None or field_type is Any:
-                continue
-
-            # go through all of the field types and check the types
-            for f in (
-                get_args(field_type)
-                if get_origin(field_type) is Union
-                else [field_type]
-            ):
-                if isinstance(value, f):
-                    break
-            else:
-                raise TypeError(
-                    f"The key '{name}' "
-                    + f"in class {self.__class__.__name__} "
-                    + f"expected '{field_type.__name__}' "
-                    + f"but got '{type(value).__name__}' instead."
-                )
-
-
-@dataclass
-class Teacher(Strict):
-    name: Union[str, list]
-    email: Union[str, list] = None
-    website: str = None
-    office: str = None
-    note: str = None
-
-
-@dataclass
-class Classroom(Strict):
-    address: str = None
-    number: str = None
-    floor: int = None
-
-
-@dataclass
-class Time(Strict):
-    day: str
-    start: int
-    end: int
-    weeks: str = None
-
-
-@dataclass
-class Finals(Strict):
-    date: date
-    classroom: Classroom
-
-
-@dataclass
-class Course(Strict):
-    name: str
-    type: str
-    abbreviation: str
-
-    teacher: Teacher = None
-    time: Time = None
-    classroom: Classroom = None
-
-    website: str = None
-    finals: Finals = None
-
-    other: Any = None
-
-    def is_ongoing(self) -> bool:
-        """Returns True if the course is ongoing and False if not."""
-        today = datetime.today()
-
-        return (
-            today.weekday() == self.weekday()
-            and self.time.start <= today.hour * 60 + today.minute <= self.time.end
-        )
-
-    def weekday(self) -> int:
-        """Get the weekday the course is on."""
-        return WD_EN.index(self.time.day.lower())
-
-    def path(self, ignore_type: bool = False) -> str:
-        """Returns the path of the course (possibly ignoring the type)."""
-        return os.path.join(
-            *(
-                [courses_folder, f"{self.name} ({self.abbreviation})"]
-                + ([] if ignore_type else [self.type])
-            )
-        )
-
-    def get_website_source_code(self) -> Union[str, None]:
-        """Return the source code of the website of the course. If it doesn't have a
-        website then throw an exception."""
-        return urlopen(self.website).read().decode("utf-8")
-
-    def website_cache_path(self) -> str:
-        """Return the path to the website cache."""
-        return os.path.join(self.path(), ".school")
-
-    def update_website_cache(self):
-        """Update the website source code (if it has a website)."""
-        source_code = self.get_website_source_code()
-
-        if source_code is not None:
-            with open(self.website_cache_path(), "w") as f:
-                f.write(source_code)
-
-    def get_website_cache(self) -> Union[str, None]:
-        """Get the cached code for the course website or None if it has not yet been
-        initialized."""
-        cache_path = self.website_cache_path()
-
-        # if it doesn't yet exist, return None
-        if not os.path.isfile(cache_path):
-            return
-
-        # else return its contents
-        else:
-            return open(cache_path, "r").read()
-
-    @classmethod
-    def from_dictionary(cls, d: Dict):
-        """Initialize a Course object from the given dictionary."""
-        return cls.__from_dictionary(cls, d)
-
-    @classmethod
-    def __from_dictionary(cls, c, d):
-        """A helper function that converts a nested dictionary to a dataclass.
-        Inspired by https://stackoverflow.com/a/54769644."""
-        if is_dataclass(c):
-            fieldtypes = {f.name: f.type for f in fields(c)}
-            return c(**{f: cls.__from_dictionary(fieldtypes[f], d[f]) for f in d})
-        else:
-            return d
-
-    @classmethod
-    def from_path(cls, path: str):
-        """Initialize a Course object from anywhere within its path."""
-        # remember the file (to read from)
-        directory = os.path.dirname(os.path.join(cwd, path))
-
-        while directory != os.path.dirname(directory):
-            for f in os.listdir(directory):
-                if f.endswith(".yaml"):
-                    course = Course.from_file(os.path.join(directory, f))
-            else:
-                directory = os.path.dirname(directory)
-                continue
-            break
-
-        return course
-
-    @classmethod
-    def from_file(cls, path: str):
-        """Initialize a Course object from the path to its .yaml dictionary."""
-        with open(path, "r") as f:
-            try:
-                # descend 2 levels down, getting the name of the course directory
-                # not pretty but works
-                root = path
-                for _ in range(3):
-                    root = os.path.dirname(root)
-                shortened_path = path[len(root) + 1 :]
-
-                course_name = shortened_path[: shortened_path.index(os.sep)]
-                course_abbreviation = course_name[course_name.rfind(" ") :][2:-1]
-
-                shortened_path = shortened_path[len(course_name) + 1 :]
-                course_type = shortened_path[: shortened_path.index(os.sep)]
-
-                course_dict = safe_load(f) or {}
-                course_dict["name"] = course_name[: course_name.rfind(" ")]
-                course_dict["type"] = course_type
-                course_dict["abbreviation"] = course_abbreviation
-
-                return Course.from_dictionary(course_dict)
-            except (YAMLError, TypeError) as e:
-                sys.exit(f"ERROR in {path}: {e}")
-            except KeyError as e:
-                sys.exit(f"ERROR in {path}: Invalid key {e}.")
-
-
-def get_cron_schedule(time: int, day: int) -> str:
-    """Returns the cron schedule expression for the specified parameters."""
-    return f"{time % 60} {time // 60} * * {day + 1}"  # day + 1, since 0 == Sunday
-
-
-def minutes_to_HHMM(minutes: int) -> str:
-    """Converts a number of minutes to a string in the form HH:MM."""
-    return f"{str(minutes // 60).rjust(2)}:{minutes % 60:02d}"
 
 
 def get_ongoing_course() -> Union[Course, None]:
@@ -276,10 +74,11 @@ def get_course_from_argument(argument: str) -> List[Course]:
         return [min_course]
 
     # if the argument is not 'next', try to interpret the identifier as an abbreviation
-    parts = argument.lower().split("-")
-
-    abbr = parts[0]
-    type = None if len(parts) == 1 else parts[1]
+    if "-" not in argument:
+        abbr = argument.lower()
+        type = None
+    else:
+        abbr, type = argument.lower().split("-", 1)
 
     # courses that were parsed as if the argument was an abbreviation
     abbr_courses = [
@@ -329,16 +128,6 @@ def get_next_course_message(i: int, courses: list) -> str:
             )
         )
     )
-
-
-def weekday_to_cz(day: str) -> str:
-    """Converts a day in English to a day in Czech"""
-    return dict(list(zip(WD_EN, WD_CZ)))[day.lower()]
-
-
-def weekday_to_en(day: str) -> str:
-    """Converts a day in Czech to a day in English"""
-    return dict(list(zip(WD_CZ, WD_EN)))[day.lower()]
 
 
 def get_sorted_courses(include_unscheduled=False) -> List[Course]:
@@ -621,27 +410,6 @@ def print_table(table: List[List[str]]):
     print(f"╰{'─' * (max_row_width + 2)}╯")
 
 
-def open_in_vim(path: str):
-    """Opens the specified path in Vim."""
-    call(["vim", path])
-
-
-def open_in_ranger(path: str):
-    """Opens the specified path in Ranger."""
-    call(["ranger", path])
-
-
-def open_in_firefox(url: str):
-    """Opens the specified website in FireFox."""
-    Popen(["firefox", "-new-window", url])
-
-
-def open_in_xournalpp(path: str):
-    """Opens the specified Xournal++ file in Xournal++."""
-    # suppress the warnings, since Xournal++ talks way too much
-    Popen(["xournalpp", path], stdout=DEVNULL, stderr=DEVNULL)
-
-
 def check_all_websites():
     """Update caches of all course websites."""
     print("Updating course website caches:")
@@ -684,7 +452,7 @@ def browse_course(argument: Union[str, None] = None):
 
 def send_mail(file_name: str):
     """Send an email to the email associated with the course."""
-    course = Course.from_path(file_name)
+    course = Course.from_path(os.path.dirname(os.path.join(cwd, file_name)))
 
     if course is None:
         sys.exit("Current working directory is not in a course directory.")
@@ -873,16 +641,16 @@ def open_course(kind: str, argument: Union[str, None] = None):
             sys.exit(f"Multiple courses matching the identifier.")
 
 
-def compile_notes() -> None:
+def compile_notes():
     """Runs md_to_pdf script on all of the courses."""
-    base = os.path.dirname(os.path.realpath(__file__))
+    paths = []
+    for course in get_sorted_courses():
+        paths.append(os.path.join(os.getcwd(), course.path(), 'notes.md'))
 
-    for path in map(lambda c: c.path(), get_sorted_courses()):
-        os.chdir(os.path.join(base, path))
-        call(["fish", "-c", "md_to_pdf -a -t"])
+    md_to_pdf.md_to_pdf.run(["-f"] + paths)
 
 
-def compile_cron_jobs() -> None:
+def compile_cron_jobs():
     """Adds notifications for upcoming classes to the crontab file."""
     # check if the script is running as root; if not, call itself as root
     if not os.geteuid() == 0:
@@ -950,7 +718,7 @@ def compile_cron_jobs() -> None:
         print(f"Course messages generated and saved to {cron_file}.")
 
 
-def list_help(tree: Dict, indentation: int) -> None:
+def list_help(tree: Dict, indentation: int):
     """Recursively pretty-prints a nested dictionary (with lists being functions)."""
     for k, v in tree.items():
         decision = "  " * indentation + f"{{{', '.join(k)}}}"
@@ -976,10 +744,6 @@ decision_tree = {
         ("cron",): (compile_cron_jobs, "Add crontab notifications for all courses.",),
         ("notes",): (compile_notes, "Run md_to_pdf script on all course notes."),
     },
-    ("config",): (
-        partial(open_in_ranger, os.path.dirname(os.path.abspath(__file__))),
-        "Open the course directory in Ranger.",
-    ),
     ("browse",): (
         browse_course,
         "Run 'fzf' on the course folder, returning the match.",
