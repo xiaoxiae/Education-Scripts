@@ -3,6 +3,7 @@ from datetime import datetime, date
 from dataclasses import *
 from yaml import safe_load, YAMLError
 from urllib.request import urlopen
+import sys
 import os
 
 # configuration

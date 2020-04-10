@@ -35,6 +35,8 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 # flags
 short = False
 
+help_offset = 20
+
 
 def get_ongoing_course() -> Union[Course, None]:
     """Returns the currently ongoing course (or None if there is no ongoing course)."""
@@ -276,26 +278,6 @@ def list_timeline():
     )
 
 
-def list_attribute(argument, attribute=""):
-    "List the given course attribute."
-    courses = get_course_from_argument(argument)
-
-    if len(courses) == 0:
-        sys.exit("No course matching the criteria.")
-    elif len(courses) != 1:
-        sys.exit("Multiple courses matching the identifier.")
-    else:
-        # print the whole course if the attribute was not specified
-        if attribute == "":
-            print(courses[0])
-
-        # else only the specific attribute
-        else:
-            print(
-                "The course does not contain this attribute."
-                if not hasattr(courses[0], attribute)
-                else getattr(courses[0], attribute)
-            )
 
 
 def list_courses(option=""):
@@ -538,55 +520,6 @@ def send_mail(file_name: str):
     smtp_server.close()
 
 
-def check_course_website(argument: Union[str, None] = None):
-    """Checks, whether the source code of the website matches the one cached. If yes,
-    let the user know. If not, print the diff and update the cache."""
-    if argument is None:
-        exit("The argument has to be either 'all', or a course name.")
-
-    if argument == "all":
-        check_all_websites()
-
-    courses = get_course_from_argument(argument)
-
-    if len(courses) == 0:
-        sys.exit("No course matching the criteria.")
-
-    elif len(courses) > 1 and not all(
-        [courses[i].website == courses[i + 1].website for i in range(len(courses) - 1)]
-    ):
-        sys.exit("Multiple courses matching the identifier.")
-
-    elif courses[0].website is None:
-        sys.exit("The course has no website.")
-
-    # get the current and the cached source code
-    cached_code = courses[0].get_website_cache()
-    current_code = courses[0].get_website_source_code()
-
-    # update the cache
-    if cached_code is None:
-        sys.exit("Cache file created.")
-    else:
-        # if there hasn't been any changes, say so
-        if cached_code == current_code:
-            # get time modified in a readable format
-            mtime = os.path.getmtime(courses[0].website_cache_path())
-            mtime_string = datetime.fromtimestamp(mtime).strftime("%-d. %-m. %Y")
-
-            sys.exit(f"No updates since {mtime_string}.")
-
-        # else print the changes diff
-        else:
-            Popen(
-                [f"diff '{courses[0].website_cache_path()}' - -u --color=always"],
-                stdin=PIPE,
-                shell=True,
-            ).communicate(current_code.encode())
-
-    courses[0].update_website_cache()
-
-
 def open_course(kind: str, argument: Union[str, None] = None):
     """Open the course's something."""
     # if no argument is specified, default to getting the current or the next course
@@ -639,15 +572,6 @@ def open_course(kind: str, argument: Union[str, None] = None):
             open_in_firefox(courses[0].website)
         else:
             sys.exit(f"Multiple courses matching the identifier.")
-
-
-def compile_notes():
-    """Runs md_to_pdf script on all of the courses."""
-    paths = []
-    for course in get_sorted_courses():
-        paths.append(os.path.join(os.getcwd(), course.path(), 'notes.md'))
-
-    md_to_pdf.md_to_pdf.run(["-f"] + paths)
 
 
 def compile_cron_jobs():
@@ -725,7 +649,7 @@ def list_help(tree: Dict, indentation: int):
 
         # either it's a function with annotation
         if type(v) is not dict:
-            print(decision.ljust(30) + v[1])
+            print(decision.ljust(help_offset) + v[1])
 
         # or it's simply a decision
         else:
@@ -736,25 +660,17 @@ def list_help(tree: Dict, indentation: int):
 decision_tree = {
     ("list",): {
         ("courses",): (list_courses, "List information about the courses."),
-        ("attribute",): (list_attribute, "List the given course attribute."),
         ("finals",): (list_finals, "List dates of all finals."),
         ("timeline",): (list_timeline, "List the courses in a timeline."),
     },
-    ("compile",): {
-        ("cron",): (compile_cron_jobs, "Add crontab notifications for all courses.",),
-        ("notes",): (compile_notes, "Run md_to_pdf script on all course notes."),
-    },
+    ("cron",): (compile_cron_jobs, "Add crontab notifications for all courses.",),
     ("browse",): (
         browse_course,
         "Run 'fzf' on the course folder, returning the match.",
     ),
-    ("check",): (
-        check_course_website,
-        "Check, whether the course website has changed.",
-    ),
     ("send",): (send_mail, "Send an email to the email of the course."),
     ("open",): {
-        ("folder", "course"): (
+        ("course",): (
             partial(open_course, "folder"),
             "Open the course's folder in Ranger.",
         ),
@@ -766,7 +682,6 @@ decision_tree = {
             partial(open_course, "notes"),
             "Open the course's notes in Xournal++.",
         ),
-        ("script",): (partial(open_in_vim, sys.argv[0]), "Open this script in Vim."),
     },
 }
 
@@ -798,8 +713,8 @@ if len(arguments) == 0:
     list_help(decision_tree, 1)
 
     print(
-        "\nsupported supported flags:\n"
-        + "  --short/-s".ljust(30)
+        "\nsupported flags:\n"
+        + "  --short/-s".ljust(help_offset)
         + "Shorten output (when possible)."
     )
 
