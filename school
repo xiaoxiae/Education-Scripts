@@ -202,12 +202,12 @@ def list_timeline():
     print(
         ("╭" + "─" * (total_minutes // 10) + "╮\n│")
         + "".join(
-            minutes_to_HHMM(beginning_minutes + interval * i).strip().ljust(10, " ")
+            Ansi.bold(minutes_to_HHMM(beginning_minutes + interval * i).strip().ljust(10, " "))
             for i in range(number_of_intervals)
         )
         + "│\n├─"
         + "".join(
-            "─" * (number_of_intervals) + ("┬" if i != number_of_intervals - 1 else "┤")
+            "─" * (number_of_intervals) + ("─" if i != number_of_intervals - 1 else "┤")
             for i in range(number_of_intervals)
         )
     )
@@ -229,11 +229,16 @@ def list_timeline():
             duration = (course.time.end - course.time.start) // 10
 
             # python's .center aligns right and it looks ugly
-            name = (course.abbreviation + "-" + course.type[0]).upper()
-            if len(name) % 2 == 0:
+            name = (course.abbreviation).upper()
+            if course.type[0] == "p":
+                name = Ansi.lecture_color(name)
+            else:
+                name = Ansi.lab_color(name)
+
+            if Ansi.len(name) % 2 == 0:
                 name += " "
 
-            print_buffer[i] += " " * wait + "{" + name.center(duration - 2) + "}"
+            print_buffer[i] += " " * wait + "{" + Ansi.center(name, duration - 2) + "}"
 
             # last course padding after
             if j == len(day) - 1:
@@ -249,21 +254,6 @@ def list_timeline():
     weekday = now.weekday()
     offset = (now.hour * 60 + now.minute - beginning_minutes) // 10 + 1
 
-    if offset > 0 and 0 <= weekday < len(print_buffer):
-        print_buffer[weekday] = (
-            print_buffer[weekday][:offset] + "#" + print_buffer[weekday][offset + 1 :]
-        )
-
-    # add vertical lines
-    for i in range(len(print_buffer)):
-        for j in range(1, number_of_intervals):
-            if print_buffer[i][(j * interval) // 10 + 1] == " ":
-                print_buffer[i] = (
-                    print_buffer[i][: (j * interval) // 10 + 1]
-                    + "│"
-                    + print_buffer[i][(j * interval) // 10 + 2 :]
-                )
-
     # print the buffer
     for line in print_buffer:
         print(line)
@@ -272,12 +262,10 @@ def list_timeline():
     print(
         "╰─"
         + "".join(
-            "─" * (number_of_intervals) + ("┴" if i != number_of_intervals - 1 else "╯")
+            "─" * (number_of_intervals) + ("─" if i != number_of_intervals - 1 else "╯")
             for i in range(number_of_intervals)
         )
     )
-
-
 
 
 def list_courses(option=""):
@@ -327,16 +315,20 @@ def list_courses(option=""):
             # for possibly surrounding the name with chars if it's ongoing
             name_surround_char = "•" if course.is_ongoing() else ""
 
+            row = [
+                f"{name_surround_char}{course.name if not short else course.abbreviation}{name_surround_char}",
+                f"{minutes_to_HHMM(courses[i].time.start)} - {minutes_to_HHMM(courses[i].time.end)}"
+                + ("" if course.time.weeks is None else f" ({course.time.weeks})"),
+                "-" if course.classroom is None else course.classroom.number,
+            ]
+
+            if course.type[0] == "p":
+                row[0] = Ansi.lecture_color(row[0])
+            else:
+                row[0] = Ansi.lab_color(row[0])
+
             # append useful information
-            table.append(
-                [
-                    f"{name_surround_char}{course.name if not short else course.abbreviation}{name_surround_char}",
-                    "-" if course.type is None else course.type[0],
-                    f"{minutes_to_HHMM(courses[i].time.start)} - {minutes_to_HHMM(courses[i].time.end)}"
-                    + ("" if course.time.weeks is None else f" ({course.time.weeks})"),
-                    "-" if course.classroom is None else course.classroom.number,
-                ]
-            )
+            table.append(row)
 
     # list unscheduled courses only when no options are specified
     if option == "" and len(unscheduled) != 0:
@@ -363,28 +355,30 @@ def print_table(table: List[List[str]]):
     column_widths = [0] * max(len(row) for row in table)
     for row in table:
         # skip weekday rows
-        if len(row) != 1:
+        if row != 1:
             for i, entry in enumerate(row):
-                if column_widths[i] < len(entry):
-                    column_widths[i] = len(entry)
+                if column_widths[i] < Ansi.len(entry):
+                    column_widths[i] = Ansi.len(entry)
 
     for i, row in enumerate(table):
         print(end="╭─" if i == 0 else "│ ")
 
-        column_sep = " │ "
-        max_row_width = sum(column_widths) + len(column_sep) * (len(column_widths) - 1)
+        column_sep = Ansi.gray(" │ ")
+        max_row_width = sum(column_widths) + Ansi.len(column_sep) * (
+            len(column_widths) - 1
+        )
 
         # if only one item is in the row, it's the weekday and is printed specially
         if len(row) == 1:
             print(
                 (f"{' ' * max_row_width} │\n├─" if i != 0 else "")
-                + f"◀ {row[0]} ▶".center(max_row_width, "─")
+                + Ansi.center(Ansi.bold(f"◀ {row[0]} ▶"), max_row_width, "─")
                 + ("─╮" if i == 0 else "─┤")
             )
         else:
             for j, entry in enumerate(row):
                 print(
-                    entry.ljust(column_widths[j])
+                    Ansi.ljust(entry, column_widths[j])
                     + (column_sep if j != (len(row) - 1) else " │\n"),
                     end="",
                 )
@@ -642,19 +636,21 @@ def compile_cron_jobs():
         print(f"Course messages generated and saved to {cron_file}.")
 
 
-def list_help(tree: Dict, indentation: int):
+def list_help(tree: Dict, indentation: int, offset: int = 0):
     """Recursively pretty-prints a nested dictionary (with lists being functions)."""
     for k, v in tree.items():
-        decision = "  " * indentation + f"{{{', '.join(k)}}}"
+        decision = " " * (indentation - offset) + f"{', '.join(k)}"
 
         # either it's a function with annotation
         if type(v) is not dict:
-            print(decision.ljust(help_offset) + v[1])
+            print(Ansi.ljust(decision, help_offset - offset) + Ansi.italics(v[1]))
 
         # or it's simply a decision
         else:
-            print(decision)
-            list_help(v, indentation + 1)
+            print(decision, end="")
+            list_help(v, Ansi.len(decision) + 1, Ansi.len(decision))
+
+        offset = 0
 
 
 decision_tree = {
@@ -704,18 +700,18 @@ while i < len(arguments):
 
 # if no arguments are specified, list help
 if len(arguments) == 0:
+    print(Ansi.bold("Supported options:"))
+
+    list_help(decision_tree, 0)
+
     print(
-        "A multi-purpose script for simplifying my MFF UK education.\n"
+        "\n"
+        + Ansi.bold("Supported flags:")
         + "\n"
-        + "supported options:"
-    )
-
-    list_help(decision_tree, 1)
-
-    print(
-        "\nsupported flags:\n"
-        + "  --short/-s".ljust(help_offset)
-        + "Shorten output (when possible)."
+        + (
+            "  --short/-s".ljust(help_offset)
+            + Ansi.italics("Shorten output (when possible).")
+        )
     )
 
     sys.exit()

@@ -2,6 +2,7 @@
 
 from subprocess import call, Popen, DEVNULL
 from urllib.request import urlopen
+from re import sub, compile
 
 
 # weekday constants
@@ -53,3 +54,58 @@ def open_in_xournalpp(path: str):
     """Opens the specified Xournal++ file in Xournal++."""
     # suppress the warnings, since Xournal++ talks way too much
     Popen(["xournalpp", path], stdout=DEVNULL, stderr=DEVNULL)
+
+
+class Ansi:
+    """A set of ANSI convenience methods."""
+
+    @classmethod
+    def lecture_color(cls, text):
+        return f"\u001b[38;5;155m{text}\u001b[0m"
+
+    @classmethod
+    def lab_color(cls, text):
+        return f"\u001b[38;5;153m{text}\u001b[0m"
+
+    @classmethod
+    def gray(cls, text):
+        """Gray coloring."""
+        return f"\u001b[38;5;240m{text}\u001b[0m"
+
+    @classmethod
+    def bold(cls, text):
+        return f"\u001b[1m{text}\u001b[0m"
+
+    @classmethod
+    def underline(cls, text):
+        return f"\u001b[4m{text}\u001b[0m"
+
+    @classmethod
+    def italics(cls, text):
+        return f"\u001b[3m{text}\u001b[0m"
+
+    @classmethod
+    def escape(cls, text):
+        return compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])").sub("", text)
+
+    @classmethod
+    def __align(cls, text: str, length: int, function: str, *args, **kwargs):
+        return getattr(text, function)(
+            length + (len(text) - cls.len(text)), *args, **kwargs
+        )
+
+    @classmethod
+    def ljust(cls, text: str, length: int, *args, **kwargs) -> str:
+        return cls.__align(text, length, "ljust", *args, **kwargs)
+
+    @classmethod
+    def rjust(cls, text: str, length: int, *args, **kwargs) -> str:
+        return cls.__align(text, length, "rjust", *args, **kwargs)
+
+    @classmethod
+    def center(cls, text: str, length: int, *args, **kwargs) -> str:
+        return cls.__align(text, length, "center", *args, **kwargs)
+
+    @classmethod
+    def len(cls, text: str, *args, **kwargs) -> int:
+        return len(cls.escape(text))
