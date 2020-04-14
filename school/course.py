@@ -10,7 +10,7 @@ import os
 from config import *
 from private_config import *
 
-from util import *
+from utilities import *
 
 
 @dataclass

@@ -13,9 +13,7 @@ from config import *
 from private_config import *
 
 from course import Course
-from util import *
-
-import md_to_pdf.md_to_pdf
+from utilities import *
 
 
 # catch SIGINT and prevent it from terminating the script, since an instance of Ranger
@@ -202,7 +200,9 @@ def list_timeline():
     print(
         ("╭" + "─" * (total_minutes // 10) + "╮\n│")
         + "".join(
-            Ansi.bold(minutes_to_HHMM(beginning_minutes + interval * i).strip().ljust(10, " "))
+            Ansi.bold(
+                minutes_to_HHMM(beginning_minutes + interval * i).strip().ljust(10, " ")
+            )
             for i in range(number_of_intervals)
         )
         + "│\n├─"
@@ -751,9 +751,4 @@ if type(decision_tree) is dict:
         f"ERROR: Decisions remaining: {{{', '.join(' or '.join(d) for d in decision_tree)}}}"
     )
 
-try:
-    decision_tree[0](*arguments)
-except TypeError:
-    print(
-        f"Invalid arguments for '{', '.join([' '.join(a) for a in parsed_arguments])}'."
-    )
+decision_tree[0](*arguments)
