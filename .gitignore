@@ -7,7 +7,7 @@ __pycache__/
 *.pdf
 
 # ignore the current semester, since it will frequently change
-aktuální semestr
+school/courses
 
 # also ignore private config
 private_config.py
