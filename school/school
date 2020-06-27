@@ -7,6 +7,7 @@ from datetime import timedelta, datetime, date
 from typing import *
 from functools import partial
 from unidecode import unidecode
+import argparse
 
 # configuration
 from config import *
@@ -30,13 +31,28 @@ signal(SIGINT, lambda _, __: None)
 cwd = os.getcwd()
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
-# flags
-short = False
-
 help_offset = 20
 
 
-def get_ongoing_course() -> Union[Course, None]:
+### ARGUMENTS ###
+parser = argparse.ArgumentParser(
+    description="A script for simplifying my university education.",
+)
+
+parser.add_argument(
+    "actions",
+    nargs="+",
+    help="the actions for the script to make; see README for details",
+)
+
+parser.add_argument(
+    "-s", "--short", dest="short", action="store_true", help="shorten the output",
+)
+
+arguments = parser.parse_args()
+
+
+def get_ongoing_course() -> Optional[Course]:
     """Returns the currently ongoing course (or None if there is no ongoing course)."""
     for course in get_sorted_courses(include_unscheduled=False):
         if course.is_ongoing():
@@ -112,8 +128,8 @@ def get_next_course_message(i: int, courses: list) -> str:
         "Dnes již žádný další předmět není."
         if course is None
         else (
-            f"Další předmět je <i>{course.name} ({course.type})</i>, "
-            f"který začíná <i>{course.time.start - courses[i].time.end} minut</i> po tomto"
+            f"Další předmět je <i>{course.name} ({course.type})</i>, který začíná"
+            f" <i>{course.time.start - courses[i].time.end} minut</i> po tomto"
             + (
                 "."
                 if course.classroom is None
@@ -169,12 +185,13 @@ def list_finals():
 
         finals.append(
             [
-                course.name,
+                Ansi.lecture_color(course.abbreviation)
+                if arguments.short
+                else Ansi.lecture_color(course.name),
                 final.date.strftime("%_d. %-m. %Y"),
                 final.date.strftime("%_H:%M"),
                 due_msg,
                 str(final.classroom.number),
-                "-" if final.classroom.floor is None else str(final.classroom.floor),
             ]
         )
 
@@ -316,8 +333,9 @@ def list_courses(option=""):
             name_surround_char = "•" if course.is_ongoing() else ""
 
             row = [
-                f"{name_surround_char}{course.name if not short else course.abbreviation}{name_surround_char}",
-                f"{minutes_to_HHMM(courses[i].time.start)} - {minutes_to_HHMM(courses[i].time.end)}"
+                f"{name_surround_char}{course.name if not arguments.short else course.abbreviation}{name_surround_char}",
+                f"{minutes_to_HHMM(courses[i].time.start)} -"
+                f" {minutes_to_HHMM(courses[i].time.end)}"
                 + ("" if course.time.weeks is None else f" ({course.time.weeks})"),
                 "-" if course.classroom is None else course.classroom.number,
             ]
@@ -336,7 +354,7 @@ def list_courses(option=""):
         for course in unscheduled:
             table.append(
                 [
-                    course.name if not short else course.abbreviation,
+                    course.name if not arguments.short else course.abbreviation,
                     course.type[0],
                     "-",
                     "-",
@@ -355,7 +373,7 @@ def print_table(table: List[List[str]]):
     column_widths = [0] * max(len(row) for row in table)
     for row in table:
         # skip weekday rows
-        if row != 1:
+        if len(row) != 1:
             for i, entry in enumerate(row):
                 if column_widths[i] < Ansi.len(entry):
                     column_widths[i] = Ansi.len(entry)
@@ -368,7 +386,7 @@ def print_table(table: List[List[str]]):
             len(column_widths) - 1
         )
 
-        # if only one item is in the row, it's the weekday and is printed specially
+        # if only one item is in the row, it will be printed specially
         if len(row) == 1:
             print(
                 (f"{' ' * max_row_width} │\n├─" if i != 0 else "")
@@ -398,7 +416,7 @@ def check_all_websites():
             print(f"- skipping {course.name} ({course.type}) -- no website")
 
 
-def browse_course(argument: Union[str, None] = None):
+def browse_course(argument: Optional[str] = None):
     "Run 'fzf' on the course folder, returning the match."
     # if none are specified, list all files of all folders
     # needs to be explicit
@@ -437,7 +455,7 @@ def send_mail(file_name: str):
         sys.exit("The course has no teacher to send the email to.")
 
     if course.teacher.email is None:
-        sys.exit("The course has no email address.")
+        sys.exit("The course teacher has no email address.")
 
     import smtplib, ssl
     from email.mime.multipart import MIMEMultipart
@@ -514,7 +532,7 @@ def send_mail(file_name: str):
     smtp_server.close()
 
 
-def open_course(kind: str, argument: Union[str, None] = None):
+def open_course(kind: str, argument: Optional[str] = None):
     """Open the course's something."""
     # if no argument is specified, default to getting the current or the next course
     courses = get_course_from_argument(argument)
@@ -582,7 +600,9 @@ def compile_cron_jobs():
 
     # comments to encapsulate the generated cron jobs
     cron_file_comments = {
-        "beginning": "# BEGINNING: course schedule crons (autogenerated, do not change)",
+        "beginning": (
+            "# BEGINNING: course schedule crons (autogenerated, do not change)"
+        ),
         "end": "# END: course schedule crons",
     }
 
@@ -639,21 +659,21 @@ def compile_cron_jobs():
 def list_help(tree: Dict, indentation: int, offset: int = 0):
     """Recursively pretty-prints a nested dictionary (with lists being functions)."""
     for k, v in tree.items():
-        decision = " " * (indentation - offset) + f"{', '.join(k)}"
+        action = " " * (indentation - offset) + f"{', '.join(k)}"
 
         # either it's a function with annotation
         if type(v) is not dict:
-            print(Ansi.ljust(decision, help_offset - offset) + Ansi.italics(v[1]))
+            print(Ansi.ljust(action, help_offset - offset) + Ansi.italics(v[1]))
 
-        # or it's simply a decision
+        # or it's simply a action
         else:
-            print(decision, end="")
-            list_help(v, Ansi.len(decision) + 1, Ansi.len(decision))
+            print(action, end="")
+            list_help(v, Ansi.len(action) + 1, Ansi.len(action))
 
         offset = 0
 
 
-decision_tree = {
+action_tree = {
     ("list",): {
         ("courses",): (list_courses, "List information about the courses."),
         ("finals",): (list_finals, "List dates of all finals."),
@@ -681,74 +701,43 @@ decision_tree = {
     },
 }
 
-arguments = sys.argv[1:]
 
-# parse flags
-i = 0
-while i < len(arguments):
-    if not arguments[i].startswith("-"):
-        i += 1
-        continue
+# go down the action tree
+parsed_actions = []
+while len(arguments.actions) != 0 and type(action_tree) is dict:
+    action = arguments.actions.pop(0)
 
-    # TODO: use reflection to do this automatically?
-    argument = arguments.pop(i)
-    if argument in ("--short", "-s"):
-        short = True
-
-    i += 1
-
-
-# if no arguments are specified, list help
-if len(arguments) == 0:
-    print(Ansi.bold("Supported options:"))
-
-    list_help(decision_tree, 0)
-
-    print(
-        "\n"
-        + Ansi.bold("Supported flags:")
-        + "\n"
-        + (
-            "  --short/-s".ljust(help_offset)
-            + Ansi.italics("Shorten output (when possible).")
-        )
-    )
-
-    sys.exit()
-
-# go down the decision tree
-parsed_arguments = []
-while len(arguments) != 0 and type(decision_tree) is dict:
-    argument = arguments.pop(0)
-
-    # sort the decisions by their common prefix with the argument
-    decisions = sorted(
-        (max([len(argument) if s.startswith(argument) else 0 for s in d]), d)
-        for d in decision_tree
+    # sort the actions by their common prefix with the argument
+    actions = sorted(
+        (max([len(action) if s.startswith(action) else 0 for s in d]), d)
+        for d in action_tree
     )
 
     # if no match is found, quit with error
-    if decisions[-1][0] == 0:
+    if actions[-1][0] == 0:
         sys.exit(
-            f"ERROR: '{argument}' doesn't match decisions in the decision tree: {{{', '.join(' or '.join(d) for d in decision_tree)}}}"
+            f"ERROR: '{action}' doesn't match actions in the action tree:"
+            f" {{{', '.join(' or '.join(d) for d in action_tree)}}}"
         )
 
-    # filter out the sub-optimal decisions
-    decisions = list(filter(lambda x: x[0] == decisions[-1][0], decisions))
+    # filter out the sub-optimal actions
+    actions = list(filter(lambda x: x[0] == actions[-1][0], actions))
 
     # if there are multiple optimal solutions, the command is ambiguous
-    if len(decisions) > 1:
+    if len(actions) > 1:
         sys.exit(
-            f"ERROR: Ambiguous decisions for '{argument}': {{{', '.join(' or '.join(d) for _, d in decisions)}}}",
+            f"ERROR: Ambiguous actions for '{action}':"
+            f" {{{', '.join(' or '.join(d) for _, d in actions)}}}",
         )
     else:
-        parsed_arguments.append(decisions[0][1])
-        decision_tree = decision_tree[decisions[0][1]]
+        parsed_actions.append(actions[0][1])
+        action_tree = action_tree[actions[0][1]]
 
-# if the decision tree isn't a function by now, exit; else extract the function
-if type(decision_tree) is dict:
+# if the action tree isn't a function by now, exit; else extract the function
+if type(action_tree) is dict:
     sys.exit(
-        f"ERROR: Decisions remaining: {{{', '.join(' or '.join(d) for d in decision_tree)}}}"
+        "ERROR: Actions remaining:"
+        f" {{{', '.join(' or '.join(d) for d in action_tree)}}}"
     )
 
-decision_tree[0](*arguments)
+action_tree[0](*arguments.actions)

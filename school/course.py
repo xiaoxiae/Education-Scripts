@@ -110,36 +110,6 @@ class Course(Strict):
             )
         )
 
-    def get_website_source_code(self) -> Union[str, None]:
-        """Return the source code of the website of the course. If it doesn't have a
-        website then throw an exception."""
-        return urlopen(self.website).read().decode("utf-8")
-
-    def website_cache_path(self) -> str:
-        """Return the path to the website cache."""
-        return os.path.join(self.path(), ".school")
-
-    def update_website_cache(self):
-        """Update the website source code (if it has a website)."""
-        source_code = self.get_website_source_code()
-
-        if source_code is not None:
-            with open(self.website_cache_path(), "w") as f:
-                f.write(source_code)
-
-    def get_website_cache(self) -> Union[str, None]:
-        """Get the cached code for the course website or None if it has not yet been
-        initialized."""
-        cache_path = self.website_cache_path()
-
-        # if it doesn't yet exist, return None
-        if not os.path.isfile(cache_path):
-            return
-
-        # else return its contents
-        else:
-            return open(cache_path, "r").read()
-
     @classmethod
     def from_dictionary(cls, d: Dict):
         """Initialize a Course object from the given dictionary."""
