@@ -183,9 +183,7 @@ def list_finals():
 
         finals.append(
             [
-                Ansi.lecture_color(course.abbreviation)
-                if arguments.short
-                else Ansi.lecture_color(course.name),
+                course.abbreviation if arguments.short else course.name,
                 final.date.strftime("%_d. %-m. %Y"),
                 final.date.strftime("%_H:%M"),
                 due_msg,
@@ -244,11 +242,9 @@ def list_timeline():
             duration = (course.time.end - course.time.start) // 10
 
             # python's .center aligns right and it looks ugly
-            name = (course.abbreviation).upper()
-            if course.type[0] == "p":
-                name = Ansi.lecture_color(name)
-            else:
-                name = Ansi.lab_color(name)
+            name = Ansi.color(
+                (course.abbreviation).upper(), course_types[course.type][0]
+            )
 
             if Ansi.len(name) % 2 == 0:
                 name += " "
@@ -338,10 +334,7 @@ def list_courses(option=""):
                 "-" if course.classroom is None else course.classroom.number,
             ]
 
-            if course.type[0] == "p":
-                row[0] = Ansi.lecture_color(row[0])
-            else:
-                row[0] = Ansi.lab_color(row[0])
+            row[0] = Ansi.color(row[0], course_types[course.type][0])
 
             # append useful information
             table.append(row)
@@ -678,4 +671,7 @@ if type(action_tree) is dict:
         f" {{{', '.join(' or '.join(d) for d in action_tree)}}}"
     )
 
-action_tree(*arguments.actions)
+try:
+    action_tree(*arguments.actions)
+except TypeError:
+    print("ERROR: Invalid arguments for the specified action.")

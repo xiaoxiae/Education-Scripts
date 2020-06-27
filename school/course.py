@@ -150,16 +150,27 @@ class Course(Strict):
                     root = os.path.dirname(root)
                 shortened_path = path[len(root) + 1 :]
 
-                course_name = shortened_path[: shortened_path.index(os.sep)]
-                course_abbreviation = course_name[course_name.rfind(" ") :][2:-1]
+                name = shortened_path[: shortened_path.index(os.sep)]
+                abbreviation = name[name.rfind(" ") :][1:]
 
-                shortened_path = shortened_path[len(course_name) + 1 :]
+                if not abbreviation.startswith("(") or not abbreviation.endswith(")"):
+                    raise ValueError(
+                        f"The course abbreviation '{abbreviation}' in '{name}' is not"
+                        " valid."
+                    )
+
+                shortened_path = shortened_path[len(name) + 1 :]
                 course_type = shortened_path[: shortened_path.index(os.sep)]
 
+                if course_type not in course_types:
+                    raise ValueError(
+                        f"The course type '{course_type}' in '{name}' is not valid."
+                    )
+
                 course_dict = safe_load(f) or {}
-                course_dict["name"] = course_name[: course_name.rfind(" ")]
+                course_dict["name"] = name[: name.rfind(" ")]
                 course_dict["type"] = course_type
-                course_dict["abbreviation"] = course_abbreviation
+                course_dict["abbreviation"] = abbreviation
 
                 return Course.from_dictionary(course_dict)
             except (YAMLError, TypeError) as e:

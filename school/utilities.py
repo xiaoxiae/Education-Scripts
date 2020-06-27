@@ -47,12 +47,8 @@ class Ansi:
     """A set of ANSI convenience methods."""
 
     @classmethod
-    def lecture_color(cls, text):
-        return f"\u001b[38;5;155m{text}\u001b[0m"
-
-    @classmethod
-    def lab_color(cls, text):
-        return f"\u001b[38;5;153m{text}\u001b[0m"
+    def color(cls, text, color: int):
+        return f"\u001b[38;5;{color}m{text}\u001b[0m"
 
     @classmethod
     def gray(cls, text):

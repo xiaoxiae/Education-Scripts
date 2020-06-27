@@ -4,6 +4,14 @@
 courses_folder = "courses/"
 
 
+# course types -- labs/lectures/...
+# the numbers are ANSI colors that the course type will be painted with (see https://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html)
+# the first letters of each of the courses must differ (for `school o c alg-c`/`school o c alc-p`)
+course_types = {
+    "cvičení": (155,),
+    "přednáška": (153,),
+}
+
 # mail settings (for gmail, since that's what I'm using
 # feel free to override in private configuration
 smtp_address = "smtp.gmail.com"
