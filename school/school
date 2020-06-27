@@ -31,8 +31,6 @@ signal(SIGINT, lambda _, __: None)
 cwd = os.getcwd()
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
-help_offset = 20
-
 
 ### ARGUMENTS ###
 parser = argparse.ArgumentParser(
@@ -547,12 +545,12 @@ def open_course(kind: str, argument: Optional[str] = None):
 
         if kind == "website":
             if course.website is not None:
-                open_in_firefox(course.website)
+                open_web_browser(course.website)
             else:
                 sys.exit("The course has no website.")
 
         elif kind == "folder":
-            open_in_ranger(course.path())
+            open_file_browser(course.path())
 
         elif kind == "notes":
             path = os.path.join(course.path(), "notes.xopp")
@@ -572,7 +570,7 @@ def open_course(kind: str, argument: Optional[str] = None):
                 for i in range(len(courses) - 1)
             ]
         ):
-            open_in_ranger(courses[0].path(ignore_type=True))
+            open_file_browser(courses[0].path(ignore_type=True))
 
         # if multiple courses were found and the websites match
         elif kind == "website" and all(
@@ -581,7 +579,7 @@ def open_course(kind: str, argument: Optional[str] = None):
                 for i in range(len(courses) - 1)
             ]
         ):
-            open_in_firefox(courses[0].website)
+            open_web_browser(courses[0].website)
         else:
             sys.exit(f"Multiple courses matching the identifier.")
 
@@ -656,54 +654,24 @@ def compile_cron_jobs():
         print(f"Course messages generated and saved to {cron_file}.")
 
 
-def list_help(tree: Dict, indentation: int, offset: int = 0):
-    """Recursively pretty-prints a nested dictionary (with lists being functions)."""
-    for k, v in tree.items():
-        action = " " * (indentation - offset) + f"{', '.join(k)}"
-
-        # either it's a function with annotation
-        if type(v) is not dict:
-            print(Ansi.ljust(action, help_offset - offset) + Ansi.italics(v[1]))
-
-        # or it's simply a action
-        else:
-            print(action, end="")
-            list_help(v, Ansi.len(action) + 1, Ansi.len(action))
-
-        offset = 0
-
-
 action_tree = {
     ("list",): {
-        ("courses",): (list_courses, "List information about the courses."),
-        ("finals",): (list_finals, "List dates of all finals."),
-        ("timeline",): (list_timeline, "List the courses in a timeline."),
+        ("courses",): list_courses,
+        ("finals",): list_finals,
+        ("timeline",): list_timeline,
     },
-    ("cron",): (compile_cron_jobs, "Add crontab notifications for all courses.",),
-    ("browse",): (
-        browse_course,
-        "Run 'fzf' on the course folder, returning the match.",
-    ),
-    ("send",): (send_mail, "Send an email to the email of the course."),
+    ("cron",): compile_cron_jobs,
+    ("browse",): browse_course,
+    ("send",): send_mail,
     ("open",): {
-        ("course",): (
-            partial(open_course, "folder"),
-            "Open the course's folder in Ranger.",
-        ),
-        ("website",): (
-            partial(open_course, "website"),
-            "Open the course's website in FireFox.",
-        ),
-        ("notes",): (
-            partial(open_course, "notes"),
-            "Open the course's notes in Xournal++.",
-        ),
+        ("course",): partial(open_course, "folder"),
+        ("website",): partial(open_course, "website"),
+        ("notes",): partial(open_course, "notes"),
     },
 }
 
 
 # go down the action tree
-parsed_actions = []
 while len(arguments.actions) != 0 and type(action_tree) is dict:
     action = arguments.actions.pop(0)
 
@@ -730,7 +698,6 @@ while len(arguments.actions) != 0 and type(action_tree) is dict:
             f" {{{', '.join(' or '.join(d) for _, d in actions)}}}",
         )
     else:
-        parsed_actions.append(actions[0][1])
         action_tree = action_tree[actions[0][1]]
 
 # if the action tree isn't a function by now, exit; else extract the function
@@ -740,4 +707,4 @@ if type(action_tree) is dict:
         f" {{{', '.join(' or '.join(d) for d in action_tree)}}}"
     )
 
-action_tree[0](*arguments.actions)
+action_tree(*arguments.actions)

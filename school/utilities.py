@@ -4,6 +4,10 @@ from subprocess import call, Popen, DEVNULL
 from urllib.request import urlopen
 from re import sub, compile
 
+# configuration
+from config import *
+from private_config import *
+
 
 # weekday constants
 WD_EN = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
@@ -35,19 +39,14 @@ def minutes_to_HHMM(minutes: int) -> str:
     return f"{str(minutes // 60).rjust(2)}:{minutes % 60:02d}"
 
 
-def open_in_vim(path: str):
-    """Opens the specified path in Vim."""
-    call(["vim", path])
+def open_file_browser(path: str):
+    """Opens the specified path in a file browser."""
+    call(file_browser + [path])
 
 
-def open_in_ranger(path: str):
-    """Opens the specified path in Ranger."""
-    call(["ranger", path])
-
-
-def open_in_firefox(url: str):
-    """Opens the specified website in FireFox."""
-    Popen(["firefox", "-new-window", url])
+def open_web_browser(url: str):
+    """Opens the specified website in a web browser."""
+    call(web_browser + [url])
 
 
 def open_in_xournalpp(path: str):
