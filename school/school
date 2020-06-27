@@ -317,7 +317,7 @@ def list_courses(option=""):
         if options[option](current_weekday, course.weekday()):
             # include the name of the day before first day's course
             if courses[i - 1].time.day != courses[i].time.day:
-                weekday = weekday_to_cz(courses[i].time.day).capitalize()
+                weekday = courses[i].time.day.capitalize()
 
                 # calculate the next occurrence
                 date = (

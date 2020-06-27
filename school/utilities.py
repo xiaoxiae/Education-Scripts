@@ -11,18 +11,6 @@ from private_config import *
 
 # weekday constants
 WD_EN = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
-WD_CZ = ("pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota", "neděle")
-
-
-def weekday_to_cz(day: str) -> str:
-    """Converts a day in English to a day in Czech"""
-    return dict(list(zip(WD_EN, WD_CZ)))[day.lower()]
-
-
-def weekday_to_en(day: str) -> str:
-    """Converts a day in Czech to a day in English"""
-    return dict(list(zip(WD_CZ, WD_EN)))[day.lower()]
-
 
 def weekday_en_index(day: str) -> int:
     """Return the index of the day in a week."""

@@ -1,7 +1,7 @@
 """A configuration file for the school script."""
 
 # the relative path to the folder where the courses are stored
-courses_folder = "aktuální semestr/"
+courses_folder = "courses/"
 
 
 # mail settings (for gmail, since that's what I'm using
