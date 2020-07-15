@@ -2,18 +2,16 @@
 
 import sys
 import os
-from subprocess import call, Popen, PIPE
+from subprocess import call
 from datetime import timedelta, datetime, date
 from typing import *
 from functools import partial
-from unidecode import unidecode
 import argparse
 
-# configuration
 from config import *
 from private_config import *
 
-from course import Course
+from course import Course, Courses
 from utilities import *
 
 
@@ -50,127 +48,13 @@ parser.add_argument(
 arguments = parser.parse_args()
 
 
-def get_ongoing_course() -> Optional[Course]:
-    """Returns the currently ongoing course (or None if there is no ongoing course)."""
-    for course in get_sorted_courses(include_unscheduled=False):
-        if course.is_ongoing():
-            return course
-
-
-def get_course_from_argument(argument: str) -> List[Course]:
-    """Returns all courses that match the format name-[type] or abbreviation-[type].
-    Examples: of valid identifiers (1st semester): ups-c, la, la-p, dm-c."""
-    # special case for no argument at all
-    if argument is None:
-        ongoing = get_ongoing_course()
-        return [ongoing] if ongoing is not None else get_course_from_argument("next")
-
-    # special case for 'next'
-    if argument in ("n", "next"):
-        today = datetime.today()
-
-        MID = 1440  # minutes in a day
-        MIW = 10080  # minutes in a week
-
-        current_week_time = today.weekday() * MID + today.hour * 60 + today.minute
-        min_time, min_course = float("+inf"), None
-
-        # TODO: do binary search
-        for course in get_sorted_courses(include_unscheduled=False):
-            time_to_course = (
-                (course.time.start + course.weekday() * MID) - current_week_time
-            ) % MIW
-
-            if time_to_course < min_time:
-                min_time = time_to_course
-                min_course = course
-
-        return [min_course]
-
-    # if the argument is not 'next', try to interpret the identifier as an abbreviation
-    if "-" not in argument:
-        abbr = argument.lower()
-        type = None
-    else:
-        abbr, type = argument.lower().split("-", 1)
-
-    # courses that were parsed as if the argument was an abbreviation
-    abbr_courses = [
-        course
-        for course in get_sorted_courses()
-        if abbr == course.abbreviation.lower() and type in {None, course.type[0]}
-    ]
-
-    # return the courses for argument as an abbreviation or for argument as a name
-    return (
-        abbr_courses
-        if len(abbr_courses) != 0
-        else [
-            course
-            for course in get_sorted_courses()
-            if unidecode(course.name.lower()).startswith(unidecode(abbr.lower()))
-            and type in {None, course.type[0]}
-        ]
-    )
-
-
-def get_next_course_message(i: int, courses: list) -> str:
-    """Returns the string of the cron job that should be ran for the upcoming course."""
-    course = (
-        None
-        if i + 1 >= len(courses) or courses[i].time.day != courses[i + 1].time.day
-        else courses[i + 1]
-    )
-
-    return (
-        "Dnes již žádný další předmět není."
-        if course is None
-        else (
-            f"Další předmět je <i>{course.name} ({course.type})</i>, který začíná"
-            f" <i>{course.time.start - courses[i].time.end} minut</i> po tomto"
-            + (
-                "."
-                if course.classroom is None
-                else (
-                    f" v učebně <i>{course.classroom.number}</i>"
-                    + (
-                        "."
-                        if course.classroom.floor is None
-                        else (f" ({course.classroom.floor}. patro).")
-                    )
-                )
-            )
-        )
-    )
-
-
-def get_sorted_courses(include_unscheduled=False) -> List[Course]:
-    """Returns a list of Course dataclasses from the courses .yaml files. This method
-    ignores courses without a schedule by default."""
-    courses = []
-
-    # find all .yaml files in the school path
-    for root, _, filenames in os.walk(courses_folder):
-        for filename in filter(lambda f: f.endswith(".yaml"), filenames):
-            # initialize a course from the path
-            course = Course.from_file(os.path.join(root, filename))
-
-            # either it's a normal or an unscheduled course
-            if course.time is not None or include_unscheduled:
-                courses.append(course)
-
-    # sort by time
-    return sorted(
-        courses, key=lambda c: (0, 0) if not c.time else (c.weekday(), c.time.start)
-    )
-
-
-def list_finals():
+def list_finals(courses: Courses):
     """Lists dates of all finals."""
     # get courses that have finals records in them
-    finals_courses = [c for c in get_sorted_courses() if c.finals is not None]
+    finals_courses = [c for c in courses.get_sorted_courses() if c.finals is not None]
+
     if len(finals_courses) == 0:
-        sys.exit("No finals added!")
+        sys.exit("No finals added yet!")
 
     # build a table
     finals = [["Finals!"]]
@@ -194,7 +78,7 @@ def list_finals():
     print_table(finals)
 
 
-def list_timeline():
+def list_timeline(courses: Courses):
     """List the courses in a timeline."""
     beginning_minutes = int(7.34 * 60)  # starting time is 7:20
     end_minutes = int(21 * 60)
@@ -206,7 +90,7 @@ def list_timeline():
 
     # separate courses based on weekdays
     days = [[] for _ in range(5)]
-    for course in get_sorted_courses(include_unscheduled=False):
+    for course in courses.get_sorted_courses(include_unscheduled=False):
         days[course.weekday()].append(course)
 
     # print the header
@@ -279,9 +163,9 @@ def list_timeline():
     )
 
 
-def list_courses(option=""):
+def list_courses(courses: Courses, option=""):
     """Lists information about the courses."""
-    courses = get_sorted_courses()
+    courses = courses.get_sorted_courses()
 
     current_day = datetime.today()
     current_weekday = current_day.weekday()
@@ -359,55 +243,7 @@ def list_courses(option=""):
     print_table(table)
 
 
-def print_table(table: List[List[str]]):
-    # find max width of each of the columns of the table
-    column_widths = [0] * max(len(row) for row in table)
-    for row in table:
-        # skip weekday rows
-        if len(row) != 1:
-            for i, entry in enumerate(row):
-                if column_widths[i] < Ansi.len(entry):
-                    column_widths[i] = Ansi.len(entry)
-
-    for i, row in enumerate(table):
-        print(end="╭─" if i == 0 else "│ ")
-
-        column_sep = Ansi.gray(" │ ")
-        max_row_width = sum(column_widths) + Ansi.len(column_sep) * (
-            len(column_widths) - 1
-        )
-
-        # if only one item is in the row, it will be printed specially
-        if len(row) == 1:
-            print(
-                (f"{' ' * max_row_width} │\n├─" if i != 0 else "")
-                + Ansi.center(Ansi.bold(f"◀ {row[0]} ▶"), max_row_width, "─")
-                + ("─╮" if i == 0 else "─┤")
-            )
-        else:
-            for j, entry in enumerate(row):
-                print(
-                    Ansi.ljust(entry, column_widths[j])
-                    + (column_sep if j != (len(row) - 1) else " │\n"),
-                    end="",
-                )
-
-    print(f"╰{'─' * (max_row_width + 2)}╯")
-
-
-def check_all_websites():
-    """Update caches of all course websites."""
-    print("Updating course website caches:")
-
-    for course in get_sorted_courses():
-        if course.website is not None:
-            print(f"- updating {course.name} ({course.type})...")
-            course.update_website_cache()
-        else:
-            print(f"- skipping {course.name} ({course.type}) -- no website")
-
-
-def send_mail(file_name: str):
+def send_mail(courses: Courses, file_name: str):
     """Send an email to the email associated with the course."""
     course = Course.from_path(os.path.dirname(os.path.join(cwd, file_name)))
 
@@ -495,10 +331,10 @@ def send_mail(file_name: str):
     smtp_server.close()
 
 
-def open_course(kind: str, argument: Optional[str] = None):
+def open_course(kind: str, courses: Courses, argument: Optional[str] = None):
     """Open the course's something."""
     # if no argument is specified, default to getting the current or the next course
-    courses = get_course_from_argument(argument)
+    courses = courses.get_course_from_argument(argument)
 
     # if none were found
     if len(courses) == 0:
@@ -528,7 +364,7 @@ def open_course(kind: str, argument: Optional[str] = None):
 
     # if multiple were found
     else:
-        # if multiple courses were found and they're all the same
+        # if multiple courses were found and they're all the same, open course folder
         if kind == "folder" and all(
             [
                 courses[i].abbreviation == courses[i + 1].abbreviation
@@ -537,7 +373,7 @@ def open_course(kind: str, argument: Optional[str] = None):
         ):
             open_file_browser(courses[0].path(ignore_type=True))
 
-        # if multiple courses were found and the websites match
+        # if multiple courses were found and the websites match, open it
         elif kind == "website" and all(
             [
                 courses[i].website == courses[i + 1].website
@@ -545,18 +381,44 @@ def open_course(kind: str, argument: Optional[str] = None):
             ]
         ):
             open_web_browser(courses[0].website)
+
         else:
             sys.exit(f"Multiple courses matching the identifier.")
 
 
-def compile_cron_jobs():
+def get_cron_schedule(minutes: int, day: int) -> str:
+    """Returns the cron schedule expression for the specified parameters."""
+    return f"{minutes % 60} {minutes // 60} * * {day + 1}"  # day + 1, since 0 == Sunday
+
+
+def get_next_course_message(i: int, courses: list) -> str:
+    """Returns the string of the cron job that should be ran for the upcoming course."""
+    course = (
+        None
+        if i + 1 >= len(courses) or courses[i].time.day != courses[i + 1].time.day
+        else courses[i + 1]
+    )
+
+    return (
+        notify_no_more_courses
+        if course is None
+        else notify_next_course_message.format(
+            course.name,
+            course.type,
+            course.time.start - courses[i].time.end,
+            "?" if course.classroom is None else course.classroom.number,
+        )
+    )
+
+
+def compile_cron_jobs(courses: Courses):
     """Adds notifications for upcoming classes to the crontab file."""
     # check if the script is running as root; if not, call itself as root
     if not os.geteuid() == 0:
-        call(["sudo", "python3", *sys.argv])
+        call(["sudo", "-E", *sys.argv])
         sys.exit()
 
-    courses = get_sorted_courses(include_unscheduled=False)
+    courses = courses.get_sorted_courses(include_unscheduled=False)
 
     cron_file = "/etc/crontab"
     user = os.getlogin()
@@ -568,6 +430,10 @@ def compile_cron_jobs():
         ),
         "end": "# END: course schedule crons",
     }
+
+    # if it doesn't exist, create it
+    if not os.path.exists(cron_file):
+        open(cron_file, "w")
 
     with open(cron_file, "r+") as f:
         contents = f.readlines()
@@ -599,12 +465,12 @@ def compile_cron_jobs():
                 ),
                 (
                     get_cron_schedule(course.time.start, course.weekday()),
-                    f"právě začal předmět <i>{course.name} ({course.type})</i>.",
+                    f"{notify_started_message} <i>{course.name} ({course.type})</i>.",
                 ),
             ]
 
             for cron_schedule, body in messages:
-                f.write(f"{cron_schedule} {user} dunstify rozvrh '{body}'\n")
+                f.write(f"{cron_schedule} {user} {notify_command} '{body}'\n")
 
         f.write(cron_file_comments["end"] + "\n")
 
@@ -672,6 +538,6 @@ if type(action_tree) is dict:
     )
 
 try:
-    action_tree(*arguments.actions)
+    action_tree(Courses(), *arguments.actions)
 except TypeError:
     print("ERROR: Invalid arguments for the specified action.")

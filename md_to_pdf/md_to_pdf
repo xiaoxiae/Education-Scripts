@@ -156,7 +156,9 @@ def get_argument_parser() -> argparse.ArgumentParser:
         metavar="M",
         type=int,
         default=15,
-        help="set the margins around the cropped Xournal++ files (in points, default 15)",
+        help=(
+            "set the margins around the cropped Xournal++ files (in points, default 15)"
+        ),
     )
 
     # pandoc parameters

@@ -1,25 +1,27 @@
 """A class that contains various useful utility methods."""
 
 from subprocess import call, Popen, DEVNULL
-from urllib.request import urlopen
 from re import sub, compile
+from typing import *
 
-# configuration
 from config import *
 from private_config import *
 
 
-# weekday constants
-WD_EN = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+WD_EN: Final[List[str]] = (
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+)
+
 
 def weekday_en_index(day: str) -> int:
     """Return the index of the day in a week."""
     return WD_EN.index(day)
-
-
-def get_cron_schedule(time: int, day: int) -> str:
-    """Returns the cron schedule expression for the specified parameters."""
-    return f"{time % 60} {time // 60} * * {day + 1}"  # day + 1, since 0 == Sunday
 
 
 def minutes_to_HHMM(minutes: int) -> str:
@@ -92,3 +94,39 @@ class Ansi:
     @classmethod
     def len(cls, text: str, *args, **kwargs) -> int:
         return len(cls.escape(text))
+
+
+def print_table(table: List[List[str]]):
+    # find max width of each of the columns of the table
+    column_widths = [0] * max(len(row) for row in table)
+    for row in table:
+        # skip weekday rows
+        if len(row) != 1:
+            for i, entry in enumerate(row):
+                if column_widths[i] < Ansi.len(entry):
+                    column_widths[i] = Ansi.len(entry)
+
+    for i, row in enumerate(table):
+        print(end="╭─" if i == 0 else "│ ")
+
+        column_sep = Ansi.gray(" │ ")
+        max_row_width = sum(column_widths) + Ansi.len(column_sep) * (
+            len(column_widths) - 1
+        )
+
+        # if only one item is in the row, it will be printed specially
+        if len(row) == 1:
+            print(
+                (f"{' ' * max_row_width} │\n├─" if i != 0 else "")
+                + Ansi.center(Ansi.bold(f"◀ {row[0]} ▶"), max_row_width, "─")
+                + ("─╮" if i == 0 else "─┤")
+            )
+        else:
+            for j, entry in enumerate(row):
+                print(
+                    Ansi.ljust(entry, column_widths[j])
+                    + (column_sep if j != (len(row) - 1) else " │\n"),
+                    end="",
+                )
+
+    print(f"╰{'─' * (max_row_width + 2)}╯")

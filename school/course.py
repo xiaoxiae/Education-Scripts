@@ -3,10 +3,10 @@ from datetime import datetime, date
 from dataclasses import *
 from yaml import safe_load, YAMLError
 from urllib.request import urlopen
+from unidecode import unidecode
 import sys
 import os
 
-# configuration
 from config import *
 from private_config import *
 
@@ -93,8 +93,12 @@ class Course(Strict):
         today = datetime.today()
 
         return (
-            today.weekday() == self.weekday()
-            and self.time.start <= today.hour * 60 + today.minute <= self.time.end
+            False
+            if self.time is not None
+            else (
+                today.weekday() == self.weekday()
+                and self.time.start <= today.hour * 60 + today.minute <= self.time.end
+            )
         )
 
     def weekday(self) -> int:
@@ -159,6 +163,8 @@ class Course(Strict):
                         " valid."
                     )
 
+                abbreviation = abbreviation[1:-1]
+
                 shortened_path = shortened_path[len(name) + 1 :]
                 course_type = shortened_path[: shortened_path.index(os.sep)]
 
@@ -177,3 +183,86 @@ class Course(Strict):
                 sys.exit(f"ERROR in {path}: {e}")
             except KeyError as e:
                 sys.exit(f"ERROR in {path}: Invalid key {e}.")
+
+
+class Courses:
+    """A class for working with all of the courses."""
+
+    def __init__(self):
+        self.courses: List[Courses] = []
+
+        for root, _, filenames in os.walk(courses_folder):
+            for filename in filter(lambda f: f.endswith(".yaml"), filenames):
+                self.courses.append(Course.from_file(os.path.join(root, filename)))
+
+    def get_sorted_courses(self, include_unscheduled=False) -> List[Course]:
+        """Return the courses, sorted by when they start during the week."""
+        return sorted(
+            filter(lambda c: c.time is not None or include_unscheduled, self.courses),
+            key=lambda c: (0, 0) if not c.time else (c.weekday(), c.time.start),
+        )
+
+    def get_ongoing_course(self) -> Optional[Course]:
+        """Returns the currently ongoing course (or None if there is none)."""
+        for course in self.get_sorted():
+            if course.is_ongoing():
+                return course
+
+    def get_course_from_argument(self, argument: str) -> List[Course]:
+        """Returns all courses that match the format name-[type] or abbreviation-[type]."""
+        argument = argument.lower().strip()
+
+        # if no argument is specified, get the ongoing/next course
+        if argument is None:
+            ongoing = get_ongoing_course()
+            return (
+                [ongoing] if ongoing is not None else get_course_from_argument("next")
+            )
+
+        # special case for 'next'
+        if argument in ("n", "next"):
+            today = datetime.today()
+
+            MID = 1440  # minutes in a day
+            MIW = 10080  # minutes in a week
+
+            current_week_time = today.weekday() * MID + today.hour * 60 + today.minute
+            min_time, min_course = float("+inf"), None
+
+            # find the course starting the soonest from now
+            for course in self.get_sorted_courses(include_unscheduled=False):
+                time_to_course = (
+                    (course.time.start + course.weekday() * MID) - current_week_time
+                ) % MIW
+
+                if time_to_course < min_time:
+                    min_time = time_to_course
+                    min_course = course
+
+            return [min_course]
+
+        # try to interpret the argument as an abbreviation
+        if "-" not in argument:
+            abbr = argument
+            type = None
+        else:
+            # split on the first -
+            abbr, type = argument.split("-", 1)
+
+        # courses that were parsed as if the argument before - was an abbreviation
+        abbr_courses = [
+            course
+            for course in self.get_sorted_courses()
+            if abbr == course.abbreviation.lower() and type in (None, course.type[0])
+        ]
+
+        # courses that were parsed as if the argument before - was a name
+        name_courses = [
+            course
+            for course in self.get_sorted_courses()
+            if unidecode(course.name.lower()).startswith(unidecode(abbr.lower()))
+            and type in {None, course.type[0]}
+        ]
+
+        # return the courses for argument as an abbreviation or for argument as a name
+        return abbr_courses if len(abbr_courses) != 0 else name_courses

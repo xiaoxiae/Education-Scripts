@@ -5,7 +5,8 @@ courses_folder = "courses/"
 
 
 # course types -- labs/lectures/...
-# the numbers are ANSI colors that the course type will be painted with (see https://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html)
+# the numbers are ANSI colors that the course type will be painted with
+# - (see https://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html)
 # the first letters of each of the courses must differ (for `school o c alg-c`/`school o c alc-p`)
 course_types = {
     "cvičení": (155,),
@@ -27,3 +28,16 @@ smtp_from = smtp_login
 # default handlers for opening course folders/websites/notes...
 file_browser = ["ranger"]
 web_browser = ["firefox", "-new-window"]
+
+
+# default handler for Cron class notifications
+# the first argument after this command is the body of the notification
+notify_command = "dunstify 'School Schedule'"
+
+notify_started_message = "právě začal předmět"  # course started message
+notify_no_more_courses = "dnes již žádný další předmět není"  # no more courses today
+notify_next_course_message = (
+    "další předmět je <i>{0} ({1})</i>, "  # {0} is course name, {1} is course type
+    "který začíná <i>{2} minut</i> po tomto "  # {2} is minutes till next course
+    "v učebně <i>{3}</i>"  # {3} is the location
+)
