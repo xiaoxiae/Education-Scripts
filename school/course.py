@@ -204,20 +204,22 @@ class Courses:
 
     def get_ongoing_course(self) -> Optional[Course]:
         """Returns the currently ongoing course (or None if there is none)."""
-        for course in self.get_sorted():
+        for course in self.get_sorted_courses():
             if course.is_ongoing():
                 return course
 
     def get_course_from_argument(self, argument: str) -> List[Course]:
         """Returns all courses that match the format name-[type] or abbreviation-[type]."""
-        argument = argument.lower().strip()
-
         # if no argument is specified, get the ongoing/next course
         if argument is None:
-            ongoing = get_ongoing_course()
+            ongoing = self.get_ongoing_course()
             return (
-                [ongoing] if ongoing is not None else get_course_from_argument("next")
+                [ongoing]
+                if ongoing is not None
+                else self.get_course_from_argument("next")
             )
+
+        argument = argument.lower().strip()
 
         # special case for 'next'
         if argument in ("n", "next"):
