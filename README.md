@@ -1,5 +1,5 @@
-# Lecture Notes Scripts
-This repository contains scripts to simplify note-taking for CS-related courses and lectures.
+# Education Scripts
+This repository contains scripts to simplify my CS education.
 
 ## school
 The main script of the repository. Performs many school-related tasks, like opening the course folder/website, printing the calendar, listing finals...
