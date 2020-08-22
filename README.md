@@ -146,16 +146,18 @@ Attachments:
 	4.pdf
 ```
 
-#### `open` action
-Leaving the option empty uses the upcoming course. One can also add `-?` at the end (where `?` is the first character of the course type) to open the specific folder inside the course (example: `algorithms-c` for the "cvičení" folder in algorithms). # TODO n/next; TODO not case sensitive a bez háčků čárek
+#### `open <action> <course>`
+Opens something course-related.
 
-#### `open course`
+Leaving `course` empty selects the ongoing (or upcoming if there is no ongoing) course. One can also add `-?` at the end (where `?` is the first character of the course type) to open the specific folder inside the course (example: `alg-c` for the "cvičení" folder in algorithms). Setting `argument` to `n` or `next` opens the next course. Note that `course` is diacritics-insensitive, so `open course ëďáüí == open course edaui`.
+
+##### `open course`
 Open the course with the specified name/abbreviation in the file browser specified in the script configuration.
 
-#### `open website`
+##### `open website`
 Open the website of the course in the file browser specified in the configuration.
 
-#### `open notes`
+##### `open notes`
 Open the `notes.xopp` file in the given course's directory in Xournal++.
 
 #### `initialize`
