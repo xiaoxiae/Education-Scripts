@@ -4,10 +4,19 @@ __pycache__/
 
 # Binary files
 *.xopp
+*.xopp~
 *.pdf
 
 # ignore the current semester, since it will frequently change
 school/courses
+
+# PyPI
+*info
+build/
+dist/
+
+# Make (contains login)
+makefile
 
 # also ignore private config
 private_config.py

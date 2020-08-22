@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import os, glob
 from subprocess import Popen, PIPE
 from re import sub, compile, MULTILINE
@@ -180,7 +178,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
         metavar="T",
         nargs="?",
         default="",
-        help="use a pre-made template found in md_to_pdf.templates; if the flag is"
+        help="use a pre-made template found in templates; if the flag is"
         + "used and no template is specified, the first one in the file is used",
     )
 
@@ -262,7 +260,7 @@ def run(commands: List[str] = None):
 
     # if the template flag was used, parse the additional arguments from the template file
     if arguments.template != "":
-        with open(f"{__file__}.templates", "r") as f:
+        with open(f"templates", "r") as f:
             for n, line in enumerate(map(lambda s: s.strip(), f.read().splitlines())):
                 # ignore comments
                 if line[0] == "#":

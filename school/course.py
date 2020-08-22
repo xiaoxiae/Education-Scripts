@@ -7,10 +7,10 @@ from unidecode import unidecode
 import sys
 import os
 
-from config import *
-from private_config import *
+from school.config import *
+from school.private_config import *
 
-from utilities import *
+from school.utilities import *
 
 
 @dataclass

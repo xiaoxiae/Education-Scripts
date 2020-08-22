@@ -4,8 +4,8 @@ from subprocess import call, Popen, DEVNULL
 from re import sub, compile
 from typing import *
 
-from config import *
-from private_config import *
+from school.config import *
+from school.private_config import *
 
 
 WD_EN: Final[List[str]] = (
