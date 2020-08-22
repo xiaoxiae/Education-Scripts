@@ -4,6 +4,9 @@ This repository contains scripts to simplify my CS education.
 ## school
 The main script of the repository. Performs many school-related tasks, like opening the course folder/website, printing the calendar, listing finals...
 
+### Starting out
+If you're a student of a school that uses SIS, use `school initialize <SIS CSV>` to create this structure automatically (see the documentation below).
+
 ### Folder structure
 The script requires a particular folder structure to function properly. By default, a `courses` folder (or a symlink) should be placed in the `school` folder of this repository, with the following contents:
 ```
