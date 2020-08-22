@@ -78,6 +78,7 @@ class Course(Strict):
     name: str
     type: str
     abbreviation: str
+    code: str = None
 
     teacher: Teacher = None
     time: Time = None

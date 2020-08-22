@@ -7,6 +7,8 @@ from datetime import timedelta, datetime, date
 from typing import *
 from functools import partial
 import argparse
+import csv
+import yaml
 
 from config import *
 from private_config import *
@@ -485,6 +487,72 @@ def compile_cron_jobs(courses: Courses):
         print(f"Course messages generated and saved to {cron_file}.")
 
 
+def initialize(courses: Courses, option=""):
+    """Initialize a new year from a CSV from SIS. Found in Rozvrh NG -> CSV."""
+    path = os.path.join(cwd, option)
+
+    def recursive_dictionary_clear(d):
+        """Recursively clear dictionary keys with empty values."""
+        for key in list(d):
+            if type(d[key]) == dict:
+                recursive_dictionary_clear(d[key])
+
+            if d[key] == "" or d[key] == {}:
+                del d[key]
+
+    if option == "":
+        sys.exit("ERROR: No CSV specified.")
+
+    if not os.path.exists(path):
+        sys.exit("ERROR: Specified file doesn't exist.")
+
+    with open(path, "rb") as f:
+        contents = f.read().decode("cp1250")
+
+        for l in list(csv.reader(contents.splitlines(), delimiter=";"))[1:]:
+            uid, _, code, name, day, start, cls, dur, _, _, _, weeks, teacher = l
+
+            out = {
+                "teacher": {"name": teacher},
+                "classroom": cls,
+                "time": {
+                    "day": WD_EN[int(day) - 1].capitalize(),
+                    "start": int(start),  # TODO HH:MM formatting
+                    "end": int(start) + int(dur),  # TODO HH:MM formatting
+                    "weeks": "even"
+                    if weeks == "sude"
+                    else "odd"
+                    if weeks == "liche"
+                    else "",
+                },
+                "code": code
+            }
+
+            recursive_dictionary_clear(out)
+
+            # create a basic abbreviation
+            abbreviation = "".join(
+                [
+                    word[0].upper() if word[0].isalpha() or word[0].isdigit() else ""
+                    for word in name.split()
+                ]
+            )
+
+            # create the directory with the name of the course
+            course_dir = os.path.join(cwd, f"{name} ({abbreviation})")
+            if not os.path.exists(course_dir):
+                os.mkdir(course_dir)
+
+            # lecture / lab
+            course_type = "přednáška" if uid[:-1].endswith("p") else "cvičení"
+
+            if not os.path.exists(os.path.join(course_dir, course_type)):
+                os.mkdir(os.path.join(course_dir, course_type))
+
+            with open(os.path.join(course_dir, course_type, "info.yaml"), "w") as f:
+                yaml.dump(out, stream=f, allow_unicode=True)
+
+
 action_tree = {
     ("list",): {
         ("courses",): list_courses,
@@ -498,6 +566,7 @@ action_tree = {
         ("website",): partial(open_course, "website"),
         ("notes",): partial(open_course, "notes"),
     },
+    ("initialize",): initialize,
 }
 
 

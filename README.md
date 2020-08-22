@@ -57,10 +57,11 @@ school
 │   └── timeline
 ├── cron
 ├── send <mail file>
-└── open
-    ├── course <course name/abbreviation>
-    ├── website <course name/abbreviation>
-    └── notes <course name/abbreviation>
+├── open
+│   ├── course <course name/abbreviation>
+│   ├── website <course name/abbreviation>
+│   └── notes <course name/abbreviation>
+└── initialize
 ```
 
 #### `list courses`
@@ -153,6 +154,9 @@ Open the website of the course in the file browser specified in the configuratio
 
 #### `open notes`
 Open the `notes.xopp` file in the given course's directory in Xournal++.
+
+#### `initialize`
+Initializes a new school year in the current directory from a CSV in the format from my university's information system (SIS). For fellow students of MFF UK: `SIS -> Rozvrh NG -> Zobrazit všechny předměty -> CSV`.
 
 ### Dependencies
 - [Xournal++](https://github.com/xournalpp/xournalpp)
