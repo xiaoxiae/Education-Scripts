@@ -569,7 +569,7 @@ if __name__ == "__main__":
     }
 
 
-# go down the action tree
+    # go down the action tree
     while len(arguments.actions) != 0 and type(action_tree) is dict:
         action = arguments.actions.pop(0)
 
@@ -598,7 +598,7 @@ if __name__ == "__main__":
         else:
             action_tree = action_tree[actions[0][1]]
 
-# if the action tree isn't a function by now, exit; else extract the function
+    # if the action tree isn't a function by now, exit; else extract the function
     if type(action_tree) is dict:
         sys.exit(
             "ERROR: Actions remaining:"
