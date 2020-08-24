@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys
 import os
 from subprocess import call
@@ -8,11 +10,11 @@ import argparse
 import csv
 import yaml
 
-from school.config import *
-from school.private_config import *
+from config import *
+from private_config import *
 
-from school.course import Course, Courses
-from school.utilities import *
+from course import Course, Courses
+from utilities import *
 
 
 # catch SIGINT and prevent it from terminating the script, since an instance of Ranger
@@ -551,61 +553,60 @@ def initialize(courses: Courses, option=""):
                 yaml.dump(out, stream=f, allow_unicode=True)
 
 
-if __name__ == "__main__":
-    action_tree = {
-        ("list",): {
-            ("courses",): list_courses,
-            ("finals",): list_finals,
-            ("timeline",): list_timeline,
-        },
-        ("cron",): compile_cron_jobs,
-        ("send",): send_mail,
-        ("open",): {
-            ("course",): partial(open_course, "folder"),
-            ("website",): partial(open_course, "website"),
-            ("notes",): partial(open_course, "notes"),
-        },
-        ("initialize",): initialize,
-    }
+action_tree = {
+    ("list",): {
+        ("courses",): list_courses,
+        ("finals",): list_finals,
+        ("timeline",): list_timeline,
+    },
+    ("cron",): compile_cron_jobs,
+    ("send",): send_mail,
+    ("open",): {
+        ("course",): partial(open_course, "folder"),
+        ("website",): partial(open_course, "website"),
+        ("notes",): partial(open_course, "notes"),
+    },
+    ("initialize",): initialize,
+}
 
 
-    # go down the action tree
-    while len(arguments.actions) != 0 and type(action_tree) is dict:
-        action = arguments.actions.pop(0)
+# go down the action tree
+while len(arguments.actions) != 0 and type(action_tree) is dict:
+    action = arguments.actions.pop(0)
 
-        # sort the actions by their common prefix with the argument
-        actions = sorted(
-            (max([len(action) if s.startswith(action) else 0 for s in d]), d)
-            for d in action_tree
-        )
+    # sort the actions by their common prefix with the argument
+    actions = sorted(
+        (max([len(action) if s.startswith(action) else 0 for s in d]), d)
+        for d in action_tree
+    )
 
-        # if no match is found, quit with error
-        if actions[-1][0] == 0:
-            sys.exit(
-                f"ERROR: '{action}' doesn't match actions in the action tree:"
-                f" {{{', '.join(' or '.join(d) for d in action_tree)}}}"
-            )
-
-        # filter out the sub-optimal actions
-        actions = list(filter(lambda x: x[0] == actions[-1][0], actions))
-
-        # if there are multiple optimal solutions, the command is ambiguous
-        if len(actions) > 1:
-            sys.exit(
-                f"ERROR: Ambiguous actions for '{action}':"
-                f" {{{', '.join(' or '.join(d) for _, d in actions)}}}",
-            )
-        else:
-            action_tree = action_tree[actions[0][1]]
-
-    # if the action tree isn't a function by now, exit; else extract the function
-    if type(action_tree) is dict:
+    # if no match is found, quit with error
+    if actions[-1][0] == 0:
         sys.exit(
-            "ERROR: Actions remaining:"
+            f"ERROR: '{action}' doesn't match actions in the action tree:"
             f" {{{', '.join(' or '.join(d) for d in action_tree)}}}"
         )
 
-    try:
-        action_tree(Courses(), *arguments.actions)
-    except TypeError:
-        print("ERROR: Invalid arguments for the specified action.")
+    # filter out the sub-optimal actions
+    actions = list(filter(lambda x: x[0] == actions[-1][0], actions))
+
+    # if there are multiple optimal solutions, the command is ambiguous
+    if len(actions) > 1:
+        sys.exit(
+            f"ERROR: Ambiguous actions for '{action}':"
+            f" {{{', '.join(' or '.join(d) for _, d in actions)}}}",
+        )
+    else:
+        action_tree = action_tree[actions[0][1]]
+
+# if the action tree isn't a function by now, exit; else extract the function
+if type(action_tree) is dict:
+    sys.exit(
+        "ERROR: Actions remaining:"
+        f" {{{', '.join(' or '.join(d) for d in action_tree)}}}"
+    )
+
+try:
+    action_tree(Courses(), *arguments.actions)
+except TypeError:
+    print("ERROR: Invalid arguments for the specified action.")
