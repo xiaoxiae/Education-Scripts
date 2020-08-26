@@ -4,10 +4,9 @@
 courses_folder = "courses/"
 
 
-# course types -- labs/lectures/...
+# settings regarding course types -- labs/lectures/...
 # the numbers are ANSI colors that the course type will be painted with
-# - (see https://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html)
-# the first letters of each of the courses must differ (for `school o c alg-c`/`school o c alc-p`)
+# see https://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
 course_types = {
     "cvičení": (155,),
     "přednáška": (153,),

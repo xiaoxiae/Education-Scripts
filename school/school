@@ -69,7 +69,10 @@ def list_finals(courses: Courses):
 
         finals.append(
             [
-                course.abbreviation if arguments.short else course.name,
+                Ansi.color(
+                    course.abbreviation if arguments.short else course.name,
+                    course_types[course.type][0],
+                ),
                 final.date.strftime("%_d. %-m. %Y"),
                 final.date.strftime("%_H:%M"),
                 due_msg,
@@ -128,9 +131,7 @@ def list_timeline(courses: Courses):
             duration = (course.time.end - course.time.start) // 10
 
             # python's .center aligns right and it looks ugly
-            name = Ansi.color(
-                (course.abbreviation).upper(), course_types[course.type][0]
-            )
+            name = Ansi.color(course.abbreviation, course_types[course.type][0])
 
             if Ansi.len(name) % 2 == 0:
                 name += " "
@@ -177,11 +178,13 @@ def list_courses(courses: Courses, option=""):
     courses = [c for c in courses if c not in unscheduled]
 
     table = []
+    option = option.lower()
+
     for i, course in enumerate(courses):
         # lambda functions to test for various options
         # a is current weekday and b is the course's weekday
         options = {
-            "": lambda a, b: True,  # all of them
+            "": lambda _, __: True,  # all of them
             "t": lambda a, b: a == b,  # today
             "tm": lambda a, b: (a + 1) % 7 == b,  # tomorrow
             "mo": lambda a, b: b == 0,
@@ -199,7 +202,7 @@ def list_courses(courses: Courses, option=""):
         if options[option](current_weekday, course.weekday()):
             # include the name of the day before first day's course
             if courses[i - 1].time.day != courses[i].time.day:
-                weekday = courses[i].time.day.capitalize()
+                weekday = course.time.day.capitalize()
 
                 # calculate the next occurrence
                 date = (
@@ -207,19 +210,25 @@ def list_courses(courses: Courses, option=""):
                     + timedelta(days=(course.weekday() - current_weekday) % 7)
                 ).strftime("%-d. %-m.")
 
-                table.append([f"{weekday} / {date}"])
+                table.append(
+                    [f"{weekday if not arguments.short else weekday[:3]} / {date}"]
+                )
 
             # for possibly surrounding the name with chars if it's ongoing
             name_surround_char = "•" if course.is_ongoing() else ""
 
             row = [
                 f"{name_surround_char}{course.name if not arguments.short else course.abbreviation}{name_surround_char}",
-                f"{minutes_to_HHMM(courses[i].time.start)} -"
-                f" {minutes_to_HHMM(courses[i].time.end)}"
-                + ("" if course.time.weeks is None else f" ({course.time.weeks})"),
+                f"{minutes_to_HHMM(course.time.start)} - {minutes_to_HHMM(course.time.end)}"
+                + (
+                    ""
+                    if course.time.weeks is None
+                    else f" ({course.time.weeks if not arguments.short else course.time.weeks[0]})"
+                ),
                 "-" if course.classroom is None else course.classroom.number,
             ]
 
+            # color the course name the appropriate color, depending on its type
             row[0] = Ansi.color(row[0], course_types[course.type][0])
 
             # append useful information
@@ -227,7 +236,7 @@ def list_courses(courses: Courses, option=""):
 
     # list unscheduled courses only when no options are specified
     if option == "" and len(unscheduled) != 0:
-        table.append(["Nerozvrženo"])
+        table.append(["Unscheduled"])
         for course in unscheduled:
             table.append(
                 [
@@ -388,11 +397,6 @@ def open_course(kind: str, courses: Courses, argument: Optional[str] = None):
             sys.exit(f"Multiple courses matching the identifier.")
 
 
-def get_cron_schedule(minutes: int, day: int) -> str:
-    """Returns the cron schedule expression for the specified parameters."""
-    return f"{minutes % 60} {minutes // 60} * * {day + 1}"  # day + 1, since 0 == Sunday
-
-
 def get_next_course_message(i: int, courses: list) -> str:
     """Returns the string of the cron job that should be ran for the upcoming course."""
     course = (
@@ -415,6 +419,11 @@ def get_next_course_message(i: int, courses: list) -> str:
 
 def compile_cron_jobs(courses: Courses):
     """Adds notifications for upcoming classes to the crontab file."""
+
+    def get_cron_schedule(minutes: int, day: int) -> str:
+        """Returns the cron schedule expression for the specified parameters."""
+        return f"{minutes % 60} {minutes // 60} * * {day + 1}"  # day + 1, since 0 == Sunday
+
     # check if the script is running as root; if not, call itself as root
     if not os.geteuid() == 0:
         call(["sudo", "-E", *sys.argv])
@@ -501,12 +510,13 @@ def initialize(courses: Courses, option=""):
                 del d[key]
 
     if option == "":
-        sys.exit("ERROR: No CSV specified.")
+        sys.exit("ERROR: No CSV to initialize from specified.")
 
     if not os.path.exists(path):
         sys.exit("ERROR: Specified file doesn't exist.")
 
     with open(path, "rb") as f:
+        # SIS uses cp1250 :(
         contents = f.read().decode("cp1250")
 
         for l in list(csv.reader(contents.splitlines(), delimiter=";"))[1:]:
@@ -525,12 +535,13 @@ def initialize(courses: Courses, option=""):
                     if weeks == "liche"
                     else "",
                 },
-                "code": code
+                "code": code,
             }
 
+            # don't print empty dictionary parts
             recursive_dictionary_clear(out)
 
-            # create a basic abbreviation
+            # create a basic abbreviation from taking first letters of each word
             abbreviation = "".join(
                 [
                     word[0].upper() if word[0].isalpha() or word[0].isdigit() else ""
@@ -544,6 +555,7 @@ def initialize(courses: Courses, option=""):
                 os.mkdir(course_dir)
 
             # lecture / lab
+            # based on the ID of the SIS ticket - labs end with x** and lectures with p*
             course_type = "přednáška" if uid[:-1].endswith("p") else "cvičení"
 
             if not os.path.exists(os.path.join(course_dir, course_type)):
@@ -554,19 +566,19 @@ def initialize(courses: Courses, option=""):
 
 
 action_tree = {
-    ("list",): {
-        ("courses",): list_courses,
-        ("finals",): list_finals,
-        ("timeline",): list_timeline,
+    "list": {
+        "courses": list_courses,
+        "finals": list_finals,
+        "timeline": list_timeline,
     },
-    ("cron",): compile_cron_jobs,
-    ("send",): send_mail,
-    ("open",): {
-        ("course",): partial(open_course, "folder"),
-        ("website",): partial(open_course, "website"),
-        ("notes",): partial(open_course, "notes"),
+    "cron": compile_cron_jobs,
+    "send": send_mail,
+    "open": {
+        "course": partial(open_course, "folder"),
+        "website": partial(open_course, "website"),
+        "notes": partial(open_course, "notes"),
     },
-    ("initialize",): initialize,
+    "initialize": initialize,
 }
 
 
@@ -576,35 +588,32 @@ while len(arguments.actions) != 0 and type(action_tree) is dict:
 
     # sort the actions by their common prefix with the argument
     actions = sorted(
-        (max([len(action) if s.startswith(action) else 0 for s in d]), d)
-        for d in action_tree
+        ([(1, a) if a.startswith(action) else (0, a) for a in action_tree])
     )
 
     # if no match is found, quit with error
     if actions[-1][0] == 0:
         sys.exit(
-            f"ERROR: '{action}' doesn't match actions in the action tree:"
-            f" {{{', '.join(' or '.join(d) for d in action_tree)}}}"
+            f"ERROR: '{action}' doesn't match actions in the action tree: {{{', '.join(action_tree)}}}."
         )
 
-    # filter out the sub-optimal actions
-    actions = list(filter(lambda x: x[0] == actions[-1][0], actions))
+    # filter out the sub-optimal actions (i. e. those
+    while actions[0][0] != actions[-1][0]:
+        actions.pop(0)
 
     # if there are multiple optimal solutions, the command is ambiguous
     if len(actions) > 1:
         sys.exit(
-            f"ERROR: Ambiguous actions for '{action}':"
-            f" {{{', '.join(' or '.join(d) for _, d in actions)}}}",
+            f"ERROR: Ambiguous actions for '{action}': {{{', '.join([a for _, a in actions])}}}"
         )
+
+    # else follow the best solution
     else:
         action_tree = action_tree[actions[0][1]]
 
 # if the action tree isn't a function by now, exit; else extract the function
 if type(action_tree) is dict:
-    sys.exit(
-        "ERROR: Actions remaining:"
-        f" {{{', '.join(' or '.join(d) for d in action_tree)}}}"
-    )
+    sys.exit(f"ERROR: Actions remaining: {{{', '.join(action_tree)}}}")
 
 try:
     action_tree(Courses(), *arguments.actions)
