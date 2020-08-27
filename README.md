@@ -63,7 +63,13 @@ school
 │   ├── course <course name/abbreviation>
 │   ├── website <course name/abbreviation>
 │   └── notes <course name/abbreviation>
-└── initialize
+├── initialize
+└── homework
+    ├── list <course name/abbreviation>
+    ├── add <course name/abbreviation>
+    ├── edit <homework ID>
+    ├── delete <homework ID>
+    └── complete <homework ID>
 ```
 
 #### `list courses`
@@ -162,12 +168,13 @@ Open the `notes.xopp` file in the given course's directory in Xournal++.
 #### `initialize`
 Initializes a new school year in the current directory from a CSV in the format from my university's information system (SIS). For fellow students of MFF UK: `SIS -> Rozvrh NG -> Zobrazit všechny předměty -> CSV`.
 
+#### `homework` (TODO documentation)
+
 ### Dependencies
 - [Xournal++](https://github.com/xournalpp/xournalpp)
 - [Ranger](https://wiki.archlinux.org/index.php/Ranger)
 - [Firefox](https://www.mozilla.org/firefox/)
 - [unidecode](https://pypi.org/project/Unidecode/) and [pyyaml](https://pyyaml.org/wiki/PyYAMLDocumentation) (also specified in `requirements.txt`)
-
 
 ## md_to_pdf
 Converts markdown files with embedded Xournal++ files to PDF (using Pandoc). Helpful when doing homework where sketches are required.

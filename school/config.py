@@ -27,6 +27,7 @@ smtp_from = smtp_login
 # default handlers for opening course folders/websites/notes...
 file_browser = ["ranger"]
 web_browser = ["firefox", "-new-window"]
+text_editor = ["vim"]
 
 
 # default handler for Cron class notifications

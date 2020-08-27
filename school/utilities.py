@@ -94,9 +94,7 @@ def exit_with_error(message: str, path: str = None):
     msg = Ansi.color(Ansi.bold("ERROR"), 9)
     if path is not None:
         msg += Ansi.color(f" in {path}", 9)
-
     msg = msg + Ansi.color(":", 9)
-
     sys.exit(f"{msg} {message}")
 
 
@@ -106,11 +104,19 @@ def due_message_from_timedelta(delta):
 
     days = abs(delta).days
     if days != 0:
-        due_msg = f"{days} {'days' if days > 1 else 'day'}, "
+        due_msg = f"{days} day{'s' if days > 1 else ''}, "
 
     hours = abs(delta).seconds // 3600
     if hours != 0:
-        due_msg += f"{hours} {'hours' if hours > 1 else 'hour'}"
+        due_msg += f"{hours} hour{'s' if hours > 1 else ''}"
+    else:
+        minutes = abs(delta).seconds // 60
+
+        if minutes != 0:
+            due_msg += f"{minutes} minute{'s' if minutes > 1 else ''}"
+
+        if due_msg == "":
+            due_msg = "now"
 
     due_msg = due_msg.strip().strip(",")
 
@@ -125,6 +131,10 @@ def open_file_browser(path: str):
 def open_web_browser(url: str):
     """Opens the specified website in a web browser."""
     call(web_browser + [url])
+
+def open_in_text_editor(path: str):
+    """Opens the specified website in a web browser."""
+    call(text_editor + [path])
 
 
 def open_in_xournalpp(path: str):
