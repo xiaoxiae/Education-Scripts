@@ -14,36 +14,6 @@ from utilities import *
 
 
 @dataclass
-class Strict:
-    """A class for strictly checking whether each of the dataclass variable types match."""
-
-    def __post_init__(self):
-        """Perform the check."""
-        for name, field_type in self.__annotations__.items():
-            value = self.__dict__[name]
-
-            # ignore None values and Any types
-            if value is None or field_type is Any:
-                continue
-
-            # go through all of the field types and check the types
-            for f in (
-                get_args(field_type)
-                if get_origin(field_type) is Union
-                else [field_type]
-            ):
-                if isinstance(value, f):
-                    break
-            else:
-                raise TypeError(
-                    f"The key '{name}' "
-                    + f"in class {self.__class__.__name__} "
-                    + f"expected '{field_type.__name__}' "
-                    + f"but got '{type(value).__name__}' instead."
-                )
-
-
-@dataclass
 class Teacher(Strict):
     name: Union[str, list]
     email: Union[str, list] = None
@@ -75,9 +45,12 @@ class Finals(Strict):
 
 @dataclass
 class Course(Strict):
-    name: str
-    type: str
-    abbreviation: str
+    # these three are not in the YAML itself, but instead added from the path to it
+    # -----------------------------------------------------------------------------
+    # name: str
+    # type: str
+    # abbreviation: str
+
     code: str = None
 
     teacher: Teacher = None
@@ -116,21 +89,6 @@ class Course(Strict):
         )
 
     @classmethod
-    def from_dictionary(cls, d: Dict):
-        """Initialize a Course object from the given dictionary."""
-        return cls.__from_dictionary(cls, d)
-
-    @classmethod
-    def __from_dictionary(cls, c, d):
-        """A helper function that converts a nested dictionary to a dataclass.
-        Inspired by https://stackoverflow.com/a/54769644."""
-        if is_dataclass(c):
-            fieldtypes = {f.name: f.type for f in fields(c)}
-            return c(**{f: cls.__from_dictionary(fieldtypes[f], d[f]) for f in d})
-        else:
-            return d
-
-    @classmethod
     def from_path(cls, path: str):
         """Initialize a Course object from anywhere within its path."""
         # go down until we find it
@@ -146,44 +104,43 @@ class Course(Strict):
     @classmethod
     def from_file(cls, path: str):
         """Initialize a Course object from the path to its .yaml dictionary."""
-        with open(path, "r") as f:
-            try:
-                # descend 2 levels down, getting the name of the course directory
-                # not pretty, but functional
-                root = path
-                for _ in range(3):
-                    root = os.path.dirname(root)
-                shortened_path = path[len(root) + 1 :]
+        # descend 2 levels down, getting the name of the course directory
+        # not pretty, but functional
+        root = path
+        for _ in range(3):
+            root = os.path.dirname(root)
+        shortened_path = path[len(root) + 1 :]
 
-                name = shortened_path[: shortened_path.index(os.sep)]
-                abbreviation = name[name.rfind(" ") :][1:]
+        name = shortened_path[: shortened_path.index(os.sep)]
+        abbreviation = name[name.rfind(" ") :][1:]
 
-                if not abbreviation.startswith("(") or not abbreviation.endswith(")"):
-                    raise ValueError(
-                        f"The course abbreviation '{abbreviation}' in '{name}' is not"
-                        " valid."
-                    )
+        invalid_abbreviation_error = (
+            f"The course abbreviation '{abbreviation}' in '{name}' is not valid."
+        )
 
-                abbreviation = abbreviation[1:-1]
+        # abbreviation not surrounded by brackets
+        if not abbreviation.startswith("(") or not abbreviation.endswith(")"):
+            exit_with_error(invalid_abbreviation_error)
 
-                shortened_path = shortened_path[len(name) + 1 :]
-                course_type = shortened_path[: shortened_path.index(os.sep)]
+        abbreviation = abbreviation[1:-1]
 
-                if course_type not in course_types:
-                    raise ValueError(
-                        f"The course type '{course_type}' in '{name}' is not valid."
-                    )
+        # empty abbreviation
+        if len(abbreviation.strip()) == 0:
+            exit_with_error(invalid_abbreviation_error)
 
-                course_dict = safe_load(f) or {}
-                course_dict["name"] = name[: name.rfind(" ")]
-                course_dict["type"] = course_type
-                course_dict["abbreviation"] = abbreviation
+        shortened_path = shortened_path[len(name) + 1 :]
+        course_type = shortened_path[: shortened_path.index(os.sep)]
 
-                return Course.from_dictionary(course_dict)
-            except (YAMLError, TypeError) as e:
-                sys.exit(f"ERROR in {path}: {e}")
-            except KeyError as e:
-                sys.exit(f"ERROR in {path}: Invalid key {e}.")
+        if course_type not in course_types:
+            sys.exit(f"The course type '{course_type}' in '{name}' is not valid.")
+
+        course = Course._from_file(path)
+
+        course.name = name[: name.rfind(" ")]
+        course.type = course_type
+        course.abbreviation = abbreviation
+
+        return course
 
 
 class Courses:
@@ -192,7 +149,11 @@ class Courses:
     def __init__(self):
         self.courses: List[Courses] = []
 
-        for root, _, filenames in os.walk(courses_folder):
+        for root, dirs, filenames in os.walk(courses_folder):
+            # https://stackoverflow.com/questions/13454164/os-walk-without-hidden-folders
+            filenames = [f for f in filenames if not f[0] == "."]
+            dirs[:] = [d for d in dirs if not d[0] == "."]
+
             for filename in filter(lambda f: f.endswith(".yaml"), filenames):
                 self.courses.append(Course.from_file(os.path.join(root, filename)))
 

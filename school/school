@@ -56,7 +56,8 @@ def list_finals(courses: Courses):
     finals_courses = [c for c in courses.get_sorted_courses() if c.finals is not None]
 
     if len(finals_courses) == 0:
-        sys.exit("No finals added yet!")
+        print("No finals added yet!")
+        sys.exit(0)
 
     # build a table
     finals = [["Finals!"]]
@@ -64,8 +65,12 @@ def list_finals(courses: Courses):
     for course in sorted(finals_courses, key=lambda c: c.finals.date):
         final = course.finals
 
-        delta = final.date.replace(tzinfo=None) - datetime.today()
-        due_msg = "done" if delta.days < 0 else f"{delta.days + 1} days"
+        # get the due message
+
+        delta = final.date.replace(tzinfo=None) - datetime.now()
+        due_msg = due_message_from_timedelta(delta)
+        if delta.days < 0:
+            due_msg = "done"
 
         finals.append(
             [
@@ -197,7 +202,7 @@ def list_courses(courses: Courses, option=""):
         }
 
         if option not in options:
-            sys.exit("Invalid option!")
+            exit_with_error("Invalid course-listing option!")
 
         if options[option](current_weekday, course.weekday()):
             # include the name of the day before first day's course
@@ -249,7 +254,7 @@ def list_courses(courses: Courses, option=""):
 
     # if no courses were added since the days didn't match, exit with a message
     if len(table) == 0:
-        sys.exit("No courses matching the criteria found!")
+        exit_with_error("No courses matching the criteria found!")
 
     print_table(table)
 
@@ -259,13 +264,13 @@ def send_mail(courses: Courses, file_name: str):
     course = Course.from_path(os.path.dirname(os.path.join(cwd, file_name)))
 
     if course is None:
-        sys.exit("Current working directory is not in a course directory.")
+        exit_with_error("Current working directory is not in a course directory.")
 
     if course.teacher is None:
-        sys.exit("The course has no teacher to send the email to.")
+        exit_with_error("The course has no teacher to send the email to.")
 
     if course.teacher.email is None:
-        sys.exit("The course teacher has no email address.")
+        exit_with_error("The course teacher has no email address.")
 
     import smtplib, ssl
     from email.mime.multipart import MIMEMultipart
@@ -282,7 +287,7 @@ def send_mail(courses: Courses, file_name: str):
         # tabs are multi-line attributes
         if line.startswith("\t"):
             if latest_attribute is None:
-                sys.exit(f"Expected attribute before tab:\n{i}: {line}")
+                exit_with_error(f"Expected attribute before tab:\n{i}: {line}")
             configuration[latest_attribute] += line.strip() + "\n"
             continue
 
@@ -291,7 +296,7 @@ def send_mail(courses: Courses, file_name: str):
             continue
 
         if ":" not in line:
-            sys.exit(f"Malformed line (missing ':'):\n{i}: {line}")
+            exit_with_error(f"Malformed line (missing ':'):\n{i}: {line}")
 
         attribute, value = (
             line[: line.find(":")].strip().lower(),
@@ -308,7 +313,7 @@ def send_mail(courses: Courses, file_name: str):
 
     for required in {"subject", "body", "attachments"}:
         if required not in configuration:
-            sys.exit(f"{required.capitalize()} not read!")
+            exit_with_error(f"{required.capitalize()} not read!")
 
     message["Subject"] = configuration["subject"]
     message.attach(MIMEText(configuration["body"]))
@@ -318,7 +323,7 @@ def send_mail(courses: Courses, file_name: str):
         attachment_path = os.path.join(os.path.dirname(config_path), attachment)
 
         if not os.path.exists(attachment_path):
-            sys.exit(f"Attachment '{attachment}' missing!")
+            exit_with_error(f"Attachment '{attachment}' missing!")
 
         att = MIMEApplication(open(attachment_path, "rb").read())
         att.add_header("content-disposition", "attachment", filename=attachment)
@@ -349,7 +354,7 @@ def open_course(kind: str, courses: Courses, argument: Optional[str] = None):
 
     # if none were found
     if len(courses) == 0:
-        sys.exit(f"No course matching the criteria.")
+        exit_with_error(f"No course matching the criteria.")
 
     # if one was found
     elif len(courses) == 1:
@@ -359,7 +364,7 @@ def open_course(kind: str, courses: Courses, argument: Optional[str] = None):
             if course.website is not None:
                 open_web_browser(course.website)
             else:
-                sys.exit("The course has no website.")
+                exit_with_error("The course has no website.")
 
         elif kind == "folder":
             open_file_browser(course.path())
@@ -369,7 +374,7 @@ def open_course(kind: str, courses: Courses, argument: Optional[str] = None):
 
             # check if the default notes exist
             if not os.path.isfile(path):
-                sys.exit(f"The course has no notes.")
+                exit_with_error(f"The course has no notes.")
             else:
                 open_in_xournalpp(path)
 
@@ -394,7 +399,7 @@ def open_course(kind: str, courses: Courses, argument: Optional[str] = None):
             open_web_browser(courses[0].website)
 
         else:
-            sys.exit(f"Multiple courses matching the identifier.")
+            exit_with_error(f"Multiple courses matching the identifier.")
 
 
 def get_next_course_message(i: int, courses: list) -> str:
@@ -510,10 +515,10 @@ def initialize(courses: Courses, option=""):
                 del d[key]
 
     if option == "":
-        sys.exit("ERROR: No CSV to initialize from specified.")
+        exit_with_error("No CSV to initialize from specified.")
 
     if not os.path.exists(path):
-        sys.exit("ERROR: Specified file doesn't exist.")
+        exit_with_error("Specified file doesn't exist.")
 
     with open(path, "rb") as f:
         # SIS uses cp1250 :(
@@ -593,8 +598,8 @@ while len(arguments.actions) != 0 and type(action_tree) is dict:
 
     # if no match is found, quit with error
     if actions[-1][0] == 0:
-        sys.exit(
-            f"ERROR: '{action}' doesn't match actions in the action tree: {{{', '.join(action_tree)}}}."
+        exit_with_error(
+            f"'{action}' doesn't match actions in the action tree: {{{', '.join(action_tree)}}}."
         )
 
     # filter out the sub-optimal actions (i. e. those
@@ -603,8 +608,8 @@ while len(arguments.actions) != 0 and type(action_tree) is dict:
 
     # if there are multiple optimal solutions, the command is ambiguous
     if len(actions) > 1:
-        sys.exit(
-            f"ERROR: Ambiguous actions for '{action}': {{{', '.join([a for _, a in actions])}}}"
+        exit_with_error(
+            f"Ambiguous actions for '{action}': {{{', '.join([a for _, a in actions])}}}"
         )
 
     # else follow the best solution
@@ -613,9 +618,9 @@ while len(arguments.actions) != 0 and type(action_tree) is dict:
 
 # if the action tree isn't a function by now, exit; else extract the function
 if type(action_tree) is dict:
-    sys.exit(f"ERROR: Actions remaining: {{{', '.join(action_tree)}}}")
+    exit_with_error(f"Actions remaining: {{{', '.join(action_tree)}}}")
 
 try:
     action_tree(Courses(), *arguments.actions)
 except TypeError:
-    print("ERROR: Invalid arguments for the specified action.")
+    exit_with_error("Invalid arguments for the specified action.")

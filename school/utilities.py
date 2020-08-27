@@ -1,8 +1,11 @@
 """A class that contains various useful utility methods."""
 
 from subprocess import call, Popen, DEVNULL
+from yaml import safe_load, YAMLError
 from re import sub, compile
 from typing import *
+from dataclasses import *
+import sys
 
 from config import *
 from private_config import *
@@ -19,6 +22,63 @@ WD_EN: Final[List[str]] = (
 )
 
 
+@dataclass
+class Strict:
+    """A class for strictly checking whether each of the dataclass variable types match."""
+
+    def __post_init__(self):
+        """Perform the check."""
+        for name, field_type in self.__annotations__.items():
+            value = self.__dict__[name]
+
+            # ignore None values and Any types
+            if value is None or field_type is Any:
+                continue
+
+            # go through all of the field types and check the types
+            for f in (
+                get_args(field_type)
+                if get_origin(field_type) is Union
+                else [field_type]
+            ):
+                if isinstance(value, f):
+                    break
+            else:
+                raise TypeError(
+                    f"The key '{name}' "
+                    + f"in class {self.__class__.__name__} "
+                    + f"expected type '{field_type.__name__}' "
+                    + f"but got type '{type(value).__name__}' instead."
+                )
+
+    @classmethod
+    def from_dictionary(cls, d: Dict):
+        """Initialize the object from the given dictionary."""
+        return cls._from_dictionary(cls, d)
+
+    @classmethod
+    def _from_dictionary(cls, c, d):
+        """A helper function that converts a nested dictionary to a dataclass.
+        Inspired by https://stackoverflow.com/a/54769644."""
+        if is_dataclass(c):
+            fieldtypes = {f.name: f.type for f in fields(c)}
+            return c(**{f: cls._from_dictionary(fieldtypes[f], d[f]) for f in d})
+        else:
+            return d
+
+    @classmethod
+    def _from_file(cls, path: str):
+        """Helper function for neatly catching various exceptions that parsing can
+        throw."""
+        try:
+            with open(path, "r") as f:
+                return cls.from_dictionary(safe_load(f))
+        except (YAMLError, TypeError) as e:
+            exit_with_error(str(e), path)
+        except KeyError as e:
+            exit_with_error(f"Invalid key {e}", path)
+
+
 def weekday_en_index(day: str) -> int:
     """Return the index of the day in a week."""
     return WD_EN.index(day)
@@ -27,6 +87,34 @@ def weekday_en_index(day: str) -> int:
 def minutes_to_HHMM(minutes: int) -> str:
     """Converts a number of minutes to a string in the form HH:MM."""
     return f"{str(minutes // 60).rjust(2)}:{minutes % 60:02d}"
+
+
+def exit_with_error(message: str, path: str = None):
+    """Exit with an error, possibly giving its path."""
+    msg = Ansi.color(Ansi.bold("ERROR"), 9)
+    if path is not None:
+        msg += Ansi.color(f" in {path}", 9)
+
+    msg = msg + Ansi.color(":", 9)
+
+    sys.exit(f"{msg} {message}")
+
+
+def due_message_from_timedelta(delta):
+    """Return a '3 days, 2 hours'-type message from a timedelta object."""
+    due_msg = ""
+
+    days = abs(delta).days
+    if days != 0:
+        due_msg = f"{days} {'days' if days > 1 else 'day'}, "
+
+    hours = abs(delta).seconds // 3600
+    if hours != 0:
+        due_msg += f"{hours} {'hours' if hours > 1 else 'hour'}"
+
+    due_msg = due_msg.strip().strip(",")
+
+    return due_msg
 
 
 def open_file_browser(path: str):
