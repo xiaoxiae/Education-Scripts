@@ -1,4 +1,7 @@
 """A module for handling homework."""
+# TODO: special deadline attributes ('next this course occurrence)
+# TODO: clone command for duplicating prolonged homework
+# - might need to dump yaml, so replacing the sed os call might be a good idea...
 from typing import *
 from dataclasses import *
 from subprocess import call

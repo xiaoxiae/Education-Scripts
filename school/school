@@ -53,8 +53,8 @@ arguments = parser.parse_args()
 action_tree = {
     "homework": {
         "list": Homeworks.list,
-        "edit": Homeworks.edit,
         "add": Homeworks.add,
+        "edit": Homeworks.edit,
         "delete": Homeworks.delete,
         "complete": Homeworks.complete
     },

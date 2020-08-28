@@ -168,7 +168,33 @@ Open the `notes.xopp` file in the given course's directory in Xournal++.
 #### `initialize`
 Initializes a new school year in the current directory from a CSV in the format from my university's information system (SIS). For fellow students of MFF UK: `SIS -> Rozvrh NG -> Zobrazit všechny předměty -> CSV`.
 
-#### `homework` (TODO documentation)
+#### `homework`
+Handles homework-related actions.
+
+##### `list <course/'all'>`
+Lists all unfinished homework. `course` is in the same form as the `open` command above. If `all` is specified, all homework (regardless of completeness) is listed.
+```
+╭───────────────────────────────────────────────◀ Homework ▶───────────────────────────────────────────────╮
+│ iqf │ Matematická analýza 1             │ Equations     │ 27. 8. 2020 │ 12:00 │ overdue (1 day, 5 hours) │
+│ rgs │ Lineární algebra 2                │ Formulas      │ 30. 8. 2020 │ 13:00 │ 1 day, 19 hours          │
+│                                                                                                          │
+├───────────────────────────────────────────◀ Without deadline ▶───────────────────────────────────────────┤
+│ myb │ Doporučené postupy v programování │ A big project │ -           │ -     │ -                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
+##### `add <course>`
+Add a new homework to a given course (same format as `open` above) and open it in the editor specified in `config.py`.
+
+##### `edit <uid>`
+Edit a homework with the given UID (to find a UID of a homework, use `homework list`).
+
+##### `delete <uid>`
+Delete a homework with the given UID.
+
+##### `complete <uid>`
+Mark a homework with the given UID as compete.
+
 
 ### Dependencies
 - [Xournal++](https://github.com/xournalpp/xournalpp)
