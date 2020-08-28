@@ -95,7 +95,8 @@ def exit_with_error(message: str, path: str = None):
     if path is not None:
         msg += Ansi.color(f" in {path}", 9)
     msg = msg + Ansi.color(":", 9)
-    sys.exit(f"{msg} {message}")
+    print(f"{msg} {message}")
+    sys.exit(1)
 
 
 def exit_with_success(message: str):
