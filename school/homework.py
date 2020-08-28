@@ -200,7 +200,7 @@ class Homeworks:
         for homework in cls.get_homeworks(completed=True, undeadlined=True):
             if homework.uid == uid:
                 os.remove(homework.path)
-                return
+                exit_with_success(f"Homework '{uid}' deleted.")
 
         exit_with_error(f"No homework with UID '{uid}' found.")
 

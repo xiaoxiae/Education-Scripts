@@ -703,7 +703,7 @@ class Courses:
 
     @classmethod
     def initialize(cls, cwd: str, option: str = "", **kwargs):
-        """Initialize a new year from a CSV from SIS. Found in Rozvrh NG -> CSV."""
+        """Initialize a new year from a CSV from SIS (found in Rozvrh NG -> CSV)."""
         path = os.path.join(cwd, option)
 
         def recursive_dictionary_clear(d):
@@ -725,6 +725,7 @@ class Courses:
             # SIS uses cp1250 :(
             contents = f.read().decode("cp1250")
 
+            course_count = 0
             for l in list(csv.reader(contents.splitlines(), delimiter=";"))[1:]:
                 uid, _, code, name, day, start, cls, dur, _, _, _, weeks, teacher = l
 
@@ -771,3 +772,7 @@ class Courses:
 
                 with open(os.path.join(course_dir, course_type, "info.yaml"), "w") as f:
                     yaml.dump(out, stream=f, allow_unicode=True)
+
+                course_count = 0
+
+        exit_with_success(f"New semester with {course_count} courses initialized.")

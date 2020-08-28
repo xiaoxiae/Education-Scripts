@@ -98,6 +98,12 @@ def exit_with_error(message: str, path: str = None):
     sys.exit(f"{msg} {message}")
 
 
+def exit_with_success(message: str):
+    """Exit with an error, possibly giving its path."""
+    print(Ansi.color("SUCCESS: ", 10) + message)
+    sys.exit(0)
+
+
 def due_message_from_timedelta(delta):
     """Return a '3 days, 2 hours'-type message from a timedelta object."""
     due_msg = ""
@@ -131,6 +137,7 @@ def open_file_browser(path: str):
 def open_web_browser(url: str):
     """Opens the specified website in a web browser."""
     call(web_browser + [url])
+
 
 def open_in_text_editor(path: str):
     """Opens the specified website in a web browser."""
