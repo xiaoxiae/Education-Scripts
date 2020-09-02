@@ -5,6 +5,8 @@ from yaml import safe_load, YAMLError
 from urllib.request import urlopen
 from unidecode import unidecode
 from datetime import timedelta, datetime, date
+import yaml
+import csv
 import sys
 import os
 
@@ -773,6 +775,6 @@ class Courses:
                 with open(os.path.join(course_dir, course_type, "info.yaml"), "w") as f:
                     yaml.dump(out, stream=f, allow_unicode=True)
 
-                course_count = 0
+                course_count += 1
 
         exit_with_success(f"New semester with {course_count} courses initialized.")

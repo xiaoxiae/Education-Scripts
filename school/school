@@ -6,8 +6,6 @@ from subprocess import call
 from typing import *
 from functools import partial
 import argparse
-import csv
-import yaml
 
 from config import *
 from private_config import *
