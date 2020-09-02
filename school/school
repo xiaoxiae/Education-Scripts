@@ -26,12 +26,29 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 ### ARGUMENTS ###
 parser = argparse.ArgumentParser(
     description="A script for simplifying my university education.",
+    formatter_class=argparse.RawTextHelpFormatter,
 )
 
 parser.add_argument(
     "actions",
     nargs="+",
-    help="the actions for the script to make; see README for details",
+    help="list\n"
+    "├── courses <when>\n"
+    "├── finals\n"
+    "└── timeline\n"
+    "cron\n"
+    "send <mail file>\n"
+    "open\n"
+    "├── course <course name/abbreviation>\n"
+    "├── website <course name/abbreviation>\n"
+    "└── notes <course name/abbreviation>\n"
+    "initialize\n"
+    "homework\n"
+    "├── list <course name/abbreviation>\n"
+    "├── add <course name/abbreviation>\n"
+    "├── edit <homework UID>\n"
+    "├── delete <homework UID>\n"
+    "└── complete <homework UID>\n",
 )
 
 parser.add_argument(
