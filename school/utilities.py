@@ -1,17 +1,17 @@
 """A class that contains various useful utility methods."""
 
-from subprocess import call, Popen, DEVNULL
-from yaml import safe_load, YAMLError
-from re import sub, compile
-from typing import *
-from dataclasses import *
 import sys
+from dataclasses import *
+from re import compile
+from subprocess import call, Popen, DEVNULL
+from typing import *
+
+from yaml import safe_load, YAMLError
 
 from config import *
 from private_config import *
 
-
-WD_EN: Final[List[str]] = (
+WD_EN = (
     "monday",
     "tuesday",
     "wednesday",

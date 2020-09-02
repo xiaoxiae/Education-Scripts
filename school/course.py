@@ -1,17 +1,9 @@
-from typing import *
-from datetime import datetime, date
-from dataclasses import *
-from yaml import safe_load, YAMLError
-from urllib.request import urlopen
-from unidecode import unidecode
-from datetime import timedelta, datetime, date
-import yaml
 import csv
-import sys
 import os
+from datetime import timedelta, datetime, date
 
-from config import *
-from private_config import *
+import yaml
+from unidecode import unidecode
 
 from utilities import *
 
@@ -150,9 +142,9 @@ class Courses:
     """A class for working with all of the courses."""
 
     @classmethod
-    def get_courses(cls):
+    def get_courses(cls) -> List[Course]:
         """Get all of the courses in no particular order."""
-        courses: List[Courses] = []
+        courses: List[Course] = []
 
         for root, dirs, filenames in os.walk(courses_folder):
             # https://stackoverflow.com/questions/13454164/os-walk-without-hidden-folders
@@ -219,25 +211,26 @@ class Courses:
 
         # try to interpret the argument as an abbreviation
         if "-" not in argument:
-            abbr = argument
-            type = None
+            c_abbr = argument
+            c_type = None
         else:
             # split on the first -
-            abbr, type = argument.split("-", 1)
+            c_abbr, c_type = argument.split("-", 1)
 
         # courses that were parsed as if the argument before - was an abbreviation
         abbr_courses = [
             course
             for course in cls.get_sorted_courses()
-            if abbr == course.abbreviation.lower() and type in (None, course.type[0])
+            if c_abbr == course.abbreviation.lower()
+            and c_type in (None, course.type[0])
         ]
 
         # courses that were parsed as if the argument before - was a name
         name_courses = [
             course
             for course in cls.get_sorted_courses()
-            if unidecode(course.name.lower()).startswith(unidecode(abbr.lower()))
-            and type in {None, course.type[0]}
+            if unidecode(course.name.lower()).startswith(unidecode(c_abbr.lower()))
+            and c_type in {None, course.type[0]}
         ]
 
         # return the courses for argument as an abbreviation or for argument as a name
@@ -347,7 +340,7 @@ class Courses:
 
             # get the due message
 
-            delta = final.date.replace(tzinfo=None) - datetime.now()
+            delta = final.date.replace() - datetime.now()
             due_msg = due_message_from_timedelta(delta)
             if delta.days < 0:
                 due_msg = "done"
@@ -495,7 +488,7 @@ class Courses:
             )
             + "│\n├─"
             + "".join(
-                "─" * (number_of_intervals)
+                "─" * number_of_intervals
                 + ("─" if i != number_of_intervals - 1 else "┤")
                 for i in range(number_of_intervals)
             )
@@ -541,6 +534,8 @@ class Courses:
         weekday = now.weekday()
         offset = (now.hour * 60 + now.minute - beginning_minutes) // 10 + 1
 
+        # TODO
+
         # print the buffer
         for line in print_buffer:
             print(line)
@@ -549,7 +544,7 @@ class Courses:
         print(
             "╰─"
             + "".join(
-                "─" * (number_of_intervals)
+                "─" * number_of_intervals
                 + ("─" if i != number_of_intervals - 1 else "╯")
                 for i in range(number_of_intervals)
             )
@@ -624,7 +619,7 @@ class Courses:
         if course.teacher.email is None:
             exit_with_error("The course teacher has no email address.")
 
-        import smtplib, ssl
+        import smtplib
         from email.mime.multipart import MIMEMultipart
         from email.mime.application import MIMEApplication
         from email.mime.text import MIMEText
@@ -698,10 +693,9 @@ class Courses:
             smtp_server = smtplib.SMTP_SSL(smtp_address, smtp_port)
             smtp_server.login(smtp_login, smtp_password)
             smtp_server.send_message(message)
+            smtp_server.close()
         except Exception as e:
             exit(f"Something went wrong when connecting to the SMTP server: {e}")
-
-        smtp_server.close()
 
     @classmethod
     def initialize(cls, cwd: str, option: str = "", **kwargs):

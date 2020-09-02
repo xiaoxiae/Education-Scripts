@@ -2,13 +2,10 @@
 # TODO: special deadline attributes ('next this course occurrence)
 # TODO: clone command for duplicating prolonged homework
 # - might need to dump yaml, so replacing the sed os call might be a good idea...
-from typing import *
-from dataclasses import *
-from subprocess import call
+import os
 from datetime import date, datetime
 from random import choice
 from string import ascii_lowercase
-import os
 
 from course import Course, Courses
 from utilities import *

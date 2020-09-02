@@ -1,25 +1,18 @@
 #!/usr/bin/env python
 
-import sys
-import os
-from subprocess import call
-from typing import *
-from functools import partial
 import argparse
+import os
+from functools import partial
 
-from config import *
-from private_config import *
+from signal import signal, SIGINT
 
-from course import Course, Courses
-from homework import Homework, Homeworks
+from course import Courses
+from homework import Homeworks
 from utilities import *
-
 
 # catch SIGINT and prevent it from terminating the script, since an instance of Ranger
 # might be running and it crashes when called using subprocess.Popen (might be related
 # to https://github.com/ranger/ranger/issues/898)
-from signal import signal, SIGINT
-
 signal(SIGINT, lambda _, __: None)
 
 
@@ -54,7 +47,7 @@ action_tree = {
         "add": Homeworks.add,
         "edit": Homeworks.edit,
         "delete": Homeworks.delete,
-        "complete": Homeworks.complete
+        "complete": Homeworks.complete,
     },
     "list": {
         "courses": Courses.list,
