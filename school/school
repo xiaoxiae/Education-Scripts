@@ -118,5 +118,4 @@ if type(action_tree) is dict:
 try:
     action_tree(*arguments.actions, **vars(arguments))
 except TypeError as e:
-    print(e)
     exit_with_error("Invalid arguments for the specified action.")

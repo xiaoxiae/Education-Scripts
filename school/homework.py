@@ -135,8 +135,7 @@ class Homeworks:
 
         # if no homework is added, be happy
         if len(table) == 1:
-            print("No homework found!")
-            return
+            exit_with_error("No homework found!")
 
         print_table(table)
 
