@@ -207,7 +207,7 @@ class Courses:
                     min_time = time_to_course
                     min_course = course
 
-            return [min_course]
+            return [min_course] if min_course is not None else []
 
         # try to interpret the argument as an abbreviation
         if "-" not in argument:
