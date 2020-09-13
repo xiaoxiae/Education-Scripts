@@ -471,13 +471,13 @@ class Courses:
         number_of_intervals = total_minutes // interval
 
         # separate courses based on weekdays
-        days = [[] for _ in range(5)]
+        days = [[] for _ in range(7)]
         for course in cls.get_sorted_courses(include_unscheduled=False):
             days[course.weekday()].append(course)
 
         # print the header
         print(
-            ("╭" + "─" * (total_minutes // 10) + "╮\n│")
+            ("     ╭" + "─" * (total_minutes // 10) + "╮\n     │")
             + "".join(
                 Ansi.bold(
                     minutes_to_HHMM(beginning_minutes + interval * i)
@@ -486,7 +486,7 @@ class Courses:
                 )
                 for i in range(number_of_intervals)
             )
-            + "│\n├─"
+            + "│\n╭────┼─"
             + "".join(
                 "─" * number_of_intervals
                 + ("─" if i != number_of_intervals - 1 else "┤")
@@ -497,7 +497,7 @@ class Courses:
         # a buffer for adding course line strings
         print_buffer = ["" for _ in range(len(days))]
         for i, day in enumerate(days):
-            print_buffer[i] += "│"
+            print_buffer[i] += f"│ {WD_EN[i][:2].capitalize()} │"
 
             for j, course in enumerate(day):
                 prev_course = days[i][j - 1]
@@ -522,11 +522,14 @@ class Courses:
 
                 # last course padding after
                 if j == len(day) - 1:
-                    print_buffer[i] += " " * (
-                        (beginning_minutes + total_minutes - course.time.end) // 10
-                    )
+                    course_padding = (
+                        beginning_minutes + total_minutes - course.time.end
+                    ) // 10
+                    break
+            else:
+                course_padding = total_minutes // 10
 
-            print_buffer[i] += "│"
+            print_buffer[i] += " " * course_padding + "│"
 
         # add current position, overriding whatever there was in the buffer
         now = datetime.now()
@@ -534,7 +537,12 @@ class Courses:
         weekday = now.weekday()
         offset = (now.hour * 60 + now.minute - beginning_minutes) // 10 + 1
 
-        # TODO
+        if 0 <= offset < Ansi.len(print_buffer[weekday]) - 7:
+            print_buffer[weekday] = (
+                print_buffer[weekday][: offset - 1 + 7]
+                + "O"
+                + print_buffer[weekday][offset + 7 :]
+            )
 
         # print the buffer
         for line in print_buffer:
@@ -542,7 +550,7 @@ class Courses:
 
         # print the very last line
         print(
-            "╰─"
+            "╰────┴─"
             + "".join(
                 "─" * number_of_intervals
                 + ("─" if i != number_of_intervals - 1 else "╯")
