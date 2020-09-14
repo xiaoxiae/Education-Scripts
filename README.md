@@ -124,7 +124,7 @@ Open the course with the specified name/abbreviation in the file browser specifi
 Open the website of the course in the file browser specified in the configuration.
 
 ##### `open notes <course>`
-Open the `notes.xopp` file in the given course's directory in Xournal++.
+Open the `notes.<note app extension>` file in the given course's directory in the note app specified in the configuration.
 
 #### `initialize <CSV file>`
 Initializes a new school year in the current directory from a CSV in the format from my university's information system (SIS). For fellow students of MFF UK: `SIS -> Rozvrh NG -> Zobrazit všechny předměty -> CSV`.

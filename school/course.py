@@ -582,13 +582,13 @@ class Courses:
                 open_file_browser(course.path())
 
             elif kind == "notes":
-                path = os.path.join(course.path(), "notes.xopp")
+                path = os.path.join(course.path(), f"notes{note_app[1]}")
 
                 # check if the default notes exist
                 if not os.path.isfile(path):
                     exit_with_error("The course has no notes.")
                 else:
-                    open_in_xournalpp(path)
+                    open_in_note_app(path)
 
         # if multiple were found
         else:

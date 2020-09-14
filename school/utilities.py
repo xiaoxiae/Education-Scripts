@@ -145,10 +145,10 @@ def open_in_text_editor(path: str):
     call(text_editor + [path])
 
 
-def open_in_xournalpp(path: str):
+def open_in_note_app(path: str):
     """Opens the specified Xournal++ file in Xournal++."""
     # suppress the warnings, since Xournal++ talks way too much
-    Popen(["xournalpp", path], stdout=DEVNULL, stderr=DEVNULL)
+    Popen([note_app[0], path], stdout=DEVNULL, stderr=DEVNULL)
 
 
 class Ansi:

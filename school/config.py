@@ -28,6 +28,7 @@ smtp_from = smtp_login
 file_browser = ["ranger"]
 web_browser = ["firefox", "-new-window"]
 text_editor = ["vim"]
+note_app = ["xournalpp", ".xopp"]  #  [app, extension]
 
 
 # default handler for Cron class notifications
