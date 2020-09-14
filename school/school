@@ -32,53 +32,57 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "actions",
     nargs="+",
-    help="list\n"
-    "├── courses <when>\n"
-    "├── finals\n"
-    "└── timeline\n"
-    "cron\n"
-    "send <mail file>\n"
-    "open\n"
-    "├── course <course name/abbreviation>\n"
-    "├── website <course name/abbreviation>\n"
-    "└── notes <course name/abbreviation>\n"
-    "initialize\n"
-    "homework\n"
-    "├── list <course name/abbreviation>\n"
-    "├── add <course name/abbreviation>\n"
-    "├── edit <homework UID>\n"
-    "├── delete <homework UID>\n"
-    "└── complete <homework UID>\n",
+    help=(
+        "list\n"
+        "├── courses <when>\n"
+        "├── finals\n"
+        "└── timeline\n"
+        "cron\n"
+        "send <mail file>\n"
+        "open\n"
+        "├── course <course name/abbreviation>\n"
+        "├── website <course name/abbreviation>\n"
+        "└── notes <course name/abbreviation>\n"
+        "initialize\n"
+        "homework\n"
+        "├── list <course name/abbreviation>\n"
+        "├── add <course name/abbreviation>\n"
+        "├── edit <homework UID>\n"
+        "├── delete <homework UID>\n"
+        "└── complete <homework UID>\n"
+    ),
 )
 
-parser.add_argument(
-    "-s", "--short", dest="short", action="store_true", help="shorten the output",
-)
+parser.add_argument("-s", "--short", action="store_true", help="shorten the output")
+parser.add_argument("-f", "--folder", help="set the courses folder (overrides config file)")
+
 
 arguments = parser.parse_args()
 
+courses = Courses(arguments.folder or courses_folder)
+homeworks = Homeworks(courses)
 
 action_tree = {
     "homework": {
-        "list": Homeworks.list,
-        "add": Homeworks.add,
-        "edit": Homeworks.edit,
-        "delete": Homeworks.delete,
-        "complete": Homeworks.complete,
+        "list": homeworks.list,
+        "add": homeworks.add,
+        "edit": homeworks.edit,
+        "delete": homeworks.delete,
+        "complete": homeworks.complete,
     },
     "list": {
-        "courses": Courses.list,
-        "finals": Courses.finals,
-        "timeline": Courses.timeline,
+        "courses": courses.list,
+        "finals": courses.finals,
+        "timeline": courses.timeline,
     },
-    "cron": Courses.compile_cron_jobs,
-    "send": partial(Courses.send_mail, cwd),
+    "cron": courses.compile_cron_jobs,
+    "send": partial(courses.send_mail, cwd),
     "open": {
-        "course": partial(Courses.open, "folder"),
-        "website": partial(Courses.open, "website"),
-        "notes": partial(Courses.open, "notes"),
+        "course": partial(courses.open, "folder"),
+        "website": partial(courses.open, "website"),
+        "notes": partial(courses.open, "notes"),
     },
-    "initialize": partial(Courses.initialize, cwd),
+    "initialize": partial(courses.initialize, cwd),
 }
 
 
@@ -94,7 +98,8 @@ while len(arguments.actions) != 0 and type(action_tree) is dict:
     # if no match is found, quit with error
     if actions[-1][0] == 0:
         exit_with_error(
-            f"'{action}' doesn't match actions in the action tree: {{{', '.join(action_tree)}}}."
+            f"'{action}' doesn't match actions in the action tree:"
+            f" {{{', '.join(action_tree)}}}."
         )
 
     # filter out the sub-optimal actions (i. e. those
@@ -104,7 +109,8 @@ while len(arguments.actions) != 0 and type(action_tree) is dict:
     # if there are multiple optimal solutions, the command is ambiguous
     if len(actions) > 1:
         exit_with_error(
-            f"Ambiguous actions for '{action}': {{{', '.join([a for _, a in actions])}}}"
+            f"Ambiguous actions for '{action}':"
+            f" {{{', '.join([a for _, a in actions])}}}"
         )
 
     # else follow the best solution

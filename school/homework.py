@@ -48,17 +48,19 @@ class Homework(Strict):
 class Homeworks:
     """A class for working with homeworks."""
 
-    @classmethod
-    def get_homeworks(cls, option: str = "", completed=False, undeadlined=True):
+    def __init__(self, courses: Courses):
+        self.courses = courses
+
+    def get_homeworks(self, option: str = "", completed=False, undeadlined=True):
         """Get all homework( object)s, sorted by their due date. If option is specified,
         only get homework from specified courses."""
         homeworks = []
 
         # either get all homework, or only homework for a particular class
         courses = (
-            Courses.get_sorted_courses()
+            self.courses.get_sorted_courses()
             if option == ""
-            else Courses.get_course_from_argument(option)
+            else self.courses.get_course_from_argument(option)
         )
 
         for course in courses:
@@ -81,15 +83,14 @@ class Homeworks:
             key=lambda h: h.deadline or datetime.max,
         )
 
-    @classmethod
-    def list(cls, option: str = "", short: bool = False, **kwargs):
+    def list(self, option: str = "", short: bool = False, **kwargs):
         # build a table
         table = [["Homework"]]
 
         homeworks = (
-            cls.get_homeworks(option)
+            self.get_homeworks(option)
             if option != "all"
-            else cls.get_homeworks(completed=True, undeadlined=True)
+            else self.get_homeworks(completed=True, undeadlined=True)
         )
 
         saw_undeadlined = False
@@ -139,20 +140,18 @@ class Homeworks:
 
         print_table(table)
 
-    @classmethod
-    def edit(cls, uid: str, **kwargs):
+    def edit(self, uid: str, **kwargs):
         """Edit a homework with the specified UID."""
-        for homework in cls.get_homeworks(completed=True, undeadlined=True):
+        for homework in self.get_homeworks(completed=True, undeadlined=True):
             if homework.uid == uid:
                 open_in_text_editor(homework.path)
                 return
 
         exit_with_error(f"No homework with UID '{uid}' found.")
 
-    @classmethod
-    def add(cls, option: str, **kwargs):
+    def add(self, option: str, **kwargs):
         """Edit a homework with the specified UID."""
-        courses = Courses.get_course_from_argument(option)
+        courses = self.courses.get_course_from_argument(option)
 
         if len(courses) == 0:
             exit_with_error("No course matching the criteria.")
@@ -170,7 +169,7 @@ class Homeworks:
             os.mkdir(hw_dir)
 
         # generate a unique UID
-        homeworks = cls.get_homeworks(completed=True, undeadlined=True)
+        homeworks = self.get_homeworks(completed=True, undeadlined=True)
         while True:
             uid = Homework.get_uid()
 
@@ -191,24 +190,22 @@ class Homeworks:
                 f"completed: False\n"
             )
 
-        cls.edit(uid)
+        self.edit(uid)
 
-    @classmethod
-    def delete(cls, uid: str, **kwargs):
+    def delete(self, uid: str, **kwargs):
         """Delete a homework with the specified UID."""
-        for homework in cls.get_homeworks(completed=True, undeadlined=True):
+        for homework in self.get_homeworks(completed=True, undeadlined=True):
             if homework.uid == uid:
                 os.remove(homework.path)
                 exit_with_success(f"Homework '{uid}' deleted.")
 
         exit_with_error(f"No homework with UID '{uid}' found.")
 
-    @classmethod
-    def complete(cls, uid: str, **kwargs):
+    def complete(self, uid: str, **kwargs):
         """Mark a homework with the specified UID as complete. Although using sed is
         likely more prone to breakage, I don't want Pyyaml messing with my formatting,
         so it's going to stay this way."""
-        for homework in cls.get_homeworks(completed=True, undeadlined=True):
+        for homework in self.get_homeworks(completed=True, undeadlined=True):
             if homework.uid == uid:
                 call(
                     [

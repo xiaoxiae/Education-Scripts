@@ -183,7 +183,7 @@ courses
 └── courses...
 ```
 
-The courses should all be in one folder, their folder names being the course name, followed by the course abbreviation (`Algorithms I (ALG)`, for example). In each of the course folders, at least one of the folders specified in `school/config.py > course_types` should be present -- these are defined by the user and separate the given course lab/lecture/... files. In the example, "cvičení" and "přednáška" is used, since I'm Czech (they translate to "lab" and "lecture"), but feel free to use whatever you wish.
+The courses should all be in one folder, their folder names being the course name, followed by the course abbreviation (`Algorithms I (ALG)`, for example). In each of the course folders, at least one of the folders specified in `school/config.py > course_types` should be present - these are defined by the user and separate the given course lab/lecture/... files. In the example, "cvičení" and "přednáška" is used, since I'm Czech (they translate to "lab" and "lecture"), but feel free to use whatever you wish.
 
 The `info.yaml` file contains all of the necessary information about the course, such as time, place, email, etc... Here is an example (see `school/course.py` for the full syntax). Here is an example:
 ```
@@ -203,6 +203,12 @@ time:
     end: 15:30
 ```
 
+### Flags
+The script supports various flags:
+- `-s`, `--short` - makes the output of the script more concise
+- `-f`, `--folder` - specify, where the courses folder is
+	- overrides `config.py`
+	- useful when you want to operate on previous semesters but don't want to rewrite configuration
 
 ## md_to_pdf
 Converts markdown files with embedded Xournal++ files to PDF (using Pandoc). Helpful when doing homework where sketches are required.

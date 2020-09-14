@@ -45,6 +45,7 @@ class Course(Strict):
     # name: str
     # type: str
     # abbreviation: str
+    # folder: str
 
     code: str = None
 
@@ -78,7 +79,7 @@ class Course(Strict):
         """Returns the path of the course (possibly ignoring the type)."""
         return os.path.join(
             *(
-                [courses_folder, f"{self.name} ({self.abbreviation})"]
+                [self.folder, f"{self.name} ({self.abbreviation})"]
                 + ([] if ignore_type else [self.type])
             )
         )
@@ -134,6 +135,7 @@ class Course(Strict):
         course.name = name[: name.rfind(" ")]
         course.type = course_type
         course.abbreviation = abbreviation
+        course.folder = root
 
         return course
 
@@ -141,12 +143,15 @@ class Course(Strict):
 class Courses:
     """A class for working with all of the courses."""
 
-    @classmethod
-    def get_courses(cls) -> List[Course]:
+    def __init__(self, folder: str):
+        """Create a Courses object from a given string."""
+        self.folder = folder
+
+    def get_courses(self) -> List[Course]:
         """Get all of the courses in no particular order."""
         courses: List[Course] = []
 
-        for root, dirs, filenames in os.walk(courses_folder):
+        for root, dirs, filenames in os.walk(self.folder):
             # https://stackoverflow.com/questions/13454164/os-walk-without-hidden-folders
             filenames = [f for f in filenames if not f[0] == "."]
             dirs[:] = [d for d in dirs if not d[0] == "."]
@@ -156,33 +161,30 @@ class Courses:
 
         return courses
 
-    @classmethod
-    def get_sorted_courses(cls, include_unscheduled=False) -> List[Course]:
+    def get_sorted_courses(self, include_unscheduled=False) -> List[Course]:
         """Return the courses, sorted by when they start during the week."""
         return sorted(
             filter(
-                lambda c: c.time is not None or include_unscheduled, cls.get_courses()
+                lambda c: c.time is not None or include_unscheduled, self.get_courses()
             ),
             key=lambda c: (0, 0) if not c.time else (c.weekday(), c.time.start),
         )
 
-    @classmethod
-    def get_ongoing_course(cls) -> Optional[Course]:
+    def get_ongoing_course(self) -> Optional[Course]:
         """Returns the currently ongoing course (or None if there is none)."""
-        for course in cls.get_sorted_courses():
+        for course in self.get_sorted_courses():
             if course.is_ongoing():
                 return course
 
-    @classmethod
-    def get_course_from_argument(cls, argument: str) -> List[Course]:
+    def get_course_from_argument(self, argument: str) -> List[Course]:
         """Returns all courses that match the format name-[type] or abbreviation-[type]."""
         # if no argument is specified, get the ongoing/next course
         if argument == "":
-            ongoing = cls.get_ongoing_course()
+            ongoing = self.get_ongoing_course()
             return (
                 [ongoing]
                 if ongoing is not None
-                else cls.get_course_from_argument("next")
+                else self.get_course_from_argument("next")
             )
 
         argument = argument.lower().strip()
@@ -198,7 +200,7 @@ class Courses:
             min_time, min_course = float("+inf"), None
 
             # find the course starting the soonest from now
-            for course in cls.get_sorted_courses(include_unscheduled=False):
+            for course in self.get_sorted_courses(include_unscheduled=False):
                 time_to_course = (
                     (course.time.start + course.weekday() * MID) - current_week_time
                 ) % MIW
@@ -220,7 +222,7 @@ class Courses:
         # courses that were parsed as if the argument before - was an abbreviation
         abbr_courses = [
             course
-            for course in cls.get_sorted_courses()
+            for course in self.get_sorted_courses()
             if c_abbr == course.abbreviation.lower()
             and c_type in (None, course.type[0])
         ]
@@ -228,7 +230,7 @@ class Courses:
         # courses that were parsed as if the argument before - was a name
         name_courses = [
             course
-            for course in cls.get_sorted_courses()
+            for course in self.get_sorted_courses()
             if unidecode(course.name.lower()).startswith(unidecode(c_abbr.lower()))
             and c_type in {None, course.type[0]}
         ]
@@ -236,10 +238,9 @@ class Courses:
         # return the courses for argument as an abbreviation or for argument as a name
         return abbr_courses if len(abbr_courses) != 0 else name_courses
 
-    @classmethod
-    def list(cls, option: str = "", short=False, **kwargs):
+    def list(self, option: str = "", short=False, **kwargs):
         """Lists information about the courses."""
-        courses = cls.get_sorted_courses()
+        courses = self.get_sorted_courses()
 
         current_day = datetime.today()
         current_weekday = current_day.weekday()
@@ -322,11 +323,10 @@ class Courses:
 
         print_table(table)
 
-    @classmethod
-    def finals(cls, short=False, **kwargs):
+    def finals(self, short=False, **kwargs):
         """Lists dates of all finals."""
         # get courses that have finals records in them
-        finals_courses = [c for c in cls.get_sorted_courses() if c.finals is not None]
+        finals_courses = [c for c in self.get_sorted_courses() if c.finals is not None]
 
         if len(finals_courses) == 0:
             print("No finals added yet!")
@@ -360,8 +360,7 @@ class Courses:
 
         print_table(finals)
 
-    @classmethod
-    def compile_cron_jobs(cls, **kwargs):
+    def compile_cron_jobs(self, **kwargs):
         """Adds notifications for upcoming classes to the crontab file."""
 
         def get_cron_schedule(minutes: int, day: int) -> str:
@@ -393,7 +392,7 @@ class Courses:
             call(["sudo", "-E", *sys.argv])
             sys.exit()
 
-        courses = cls.get_sorted_courses(include_unscheduled=False)
+        courses = self.get_sorted_courses(include_unscheduled=False)
 
         cron_file = "/etc/crontab"
         user = os.getlogin()
@@ -459,8 +458,7 @@ class Courses:
 
             print(f"Course messages generated and saved to {cron_file}.")
 
-    @classmethod
-    def timeline(cls, **kwargs):
+    def timeline(self, **kwargs):
         """List the courses in a timeline."""
         beginning_minutes = int(7.34 * 60)  # starting time is 7:20
         end_minutes = int(21 * 60)
@@ -472,7 +470,7 @@ class Courses:
 
         # separate courses based on weekdays
         days = [[] for _ in range(7)]
-        for course in cls.get_sorted_courses(include_unscheduled=False):
+        for course in self.get_sorted_courses(include_unscheduled=False):
             days[course.weekday()].append(course)
 
         # print the header
@@ -531,19 +529,6 @@ class Courses:
 
             print_buffer[i] += " " * course_padding + "│"
 
-        # add current position, overriding whatever there was in the buffer
-        now = datetime.now()
-
-        weekday = now.weekday()
-        offset = (now.hour * 60 + now.minute - beginning_minutes) // 10 + 1
-
-        if 0 <= offset < Ansi.len(print_buffer[weekday]) - 7:
-            print_buffer[weekday] = (
-                print_buffer[weekday][: offset - 1 + 7]
-                + "O"
-                + print_buffer[weekday][offset + 7 :]
-            )
-
         # print the buffer
         for line in print_buffer:
             print(line)
@@ -558,11 +543,10 @@ class Courses:
             )
         )
 
-    @classmethod
-    def open(cls, kind: str, option: str = "", **kwargs):
+    def open(self, kind: str, option: str = "", **kwargs):
         """Open the course's something."""
         # if no argument is specified, default to getting the current or the next course
-        courses = cls.get_course_from_argument(option)
+        courses = self.get_course_from_argument(option)
 
         # if none were found
         if len(courses) == 0:
@@ -613,8 +597,7 @@ class Courses:
             else:
                 exit_with_error("Multiple courses matching.")
 
-    @classmethod
-    def send_mail(cls, cwd: str, file_name: str, **kwargs):
+    def send_mail(self, cwd: str, file_name: str, **kwargs):
         """Send an email to the email associated with the course."""
         course = Course.from_path(os.path.dirname(os.path.join(cwd, file_name)))
 
@@ -705,8 +688,7 @@ class Courses:
         except Exception as e:
             exit(f"Something went wrong when connecting to the SMTP server: {e}")
 
-    @classmethod
-    def initialize(cls, cwd: str, option: str = "", **kwargs):
+    def initialize(self, cwd: str, option: str = "", **kwargs):
         """Initialize a new year from a CSV from SIS (found in Rozvrh NG -> CSV)."""
         path = os.path.join(cwd, option)
 
@@ -731,11 +713,11 @@ class Courses:
 
             course_count = 0
             for l in list(csv.reader(contents.splitlines(), delimiter=";"))[1:]:
-                uid, _, code, name, day, start, cls, dur, _, _, _, weeks, teacher = l
+                uid, _, code, name, day, start, self, dur, _, _, _, weeks, teacher = l
 
                 out = {
                     "teacher": {"name": teacher},
-                    "classroom": cls,
+                    "classroom": self,
                     "time": {
                         "day": WD_EN[int(day) - 1].capitalize(),
                         "start": int(start),  # TODO HH:MM formatting

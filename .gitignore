@@ -6,8 +6,9 @@ __pycache__/
 *.xopp
 *.pdf
 
-# ignore the current semester, since it will frequently change
+# ignore the current semester (and the previous ones), since it will frequently change
 school/courses
+school/[0-9]*
 
 # also ignore private config
 private_config.py
