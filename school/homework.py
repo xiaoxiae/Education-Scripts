@@ -41,8 +41,9 @@ class Homework(Strict):
 
     @classmethod
     def get_uid(cls):
-        """Generate a homework UID."""
-        return "".join([choice(ascii_lowercase) for _ in range(3)])
+        """Generate a homework UID. Size 2 gives 26^2 = 676. That should be more than
+        enough individual homework assignments for a semester"""
+        return "".join([choice(ascii_lowercase) for _ in range(2)])
 
 
 class Homeworks:
