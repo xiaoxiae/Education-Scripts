@@ -126,6 +126,9 @@ Open the website of the course in the file browser specified in the configuratio
 ##### `open notes <course>`
 Open the `notes.<note app extension>` file in the given course's directory in the note app specified in the configuration.
 
+##### `open online <course>`
+Open the course's online link in the file browser specified in the configuration. Meant to be a Zoom (or Zoom-like service) link, which will likely differ from the course's website.
+
 #### `initialize <CSV file>`
 Initializes a new school year in the current directory from a CSV in the format from my university's information system (SIS). For fellow students of MFF UK: `SIS -> Rozvrh NG -> Zobrazit všechny předměty -> CSV`.
 
@@ -185,22 +188,34 @@ courses
 
 The courses should all be in one folder, their folder names being the course name, followed by the course abbreviation (`Algorithms I (ALG)`, for example). In each of the course folders, at least one of the folders specified in `school/config.py > course_types` should be present - these are defined by the user and separate the given course lab/lecture/... files. In the example, "cvičení" and "přednáška" is used, since I'm Czech (they translate to "lab" and "lecture"), but feel free to use whatever you wish.
 
-The `info.yaml` file contains all of the necessary information about the course, such as time, place, email, etc... Here is an example (see `school/course.py` for the full syntax). Here is an example:
+The `info.yaml` file contains all of the necessary information about the course, such as time, place, email, etc... Here is the full syntax with sample values:
 ```
-teacher:
-    name: John Smith
-    email: smith@email.com
+code: 14j1o53
 
-classroom:
+teacher:  # optional
+    name: John Smith  # mandatory
+    email: smith@email.com
+    website: john.com
+    office: T312
+    note: "Consultations from 13:00 to 15:00 on Wednesday."
+
+classroom:  # optional
+    address: 89 Old Atlantic St. Christiansburg, VA 24073
     number: S11
     floor: 3
 
-website: https://www.google.com
-
-time:
-    day: Wednesday
+time:  # optional
+    day: Wednesday  # mandatory
     start: 14:00
     end: 15:30
+    weeks: odd
+
+finals:  # optional
+    date: 2020-06-18T13:00:00Z  # mandatory
+    classroom:  # mandatory, same syntax as classroom above
+
+website: https://www.google.com
+online: https://zoom.us/j/96931706150
 ```
 
 ### Flags

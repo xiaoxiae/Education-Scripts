@@ -81,6 +81,7 @@ action_tree = {
         "course": partial(courses.open, "folder"),
         "website": partial(courses.open, "website"),
         "notes": partial(courses.open, "notes"),
+        "zoom": partial(courses.open, "zoom"),
     },
     "initialize": partial(courses.initialize, cwd),
 }

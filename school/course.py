@@ -54,9 +54,8 @@ class Course(Strict):
     classroom: Classroom = None
 
     website: str = None
+    online: str = None
     finals: Finals = None
-
-    other: Any = None
 
     def is_ongoing(self) -> bool:
         """Returns True if the course is ongoing and False if not."""
@@ -578,9 +577,16 @@ class Courses:
                 else:
                     open_in_note_app(path)
 
+            elif kind == "online":
+                if course.online is not None:
+                    open_web_browser(course.online)
+                else:
+                    exit_with_error("The course has no online link.")
+
         # if multiple were found
         else:
-            # if multiple courses were found and they're all the same, open course folder
+            # if multiple courses were found and they're all the same (but different
+            # type), open the general course folder
             if kind == "folder" and all(
                 [
                     courses[i].abbreviation == courses[i + 1].abbreviation
@@ -588,16 +594,6 @@ class Courses:
                 ]
             ):
                 open_file_browser(courses[0].path(ignore_type=True))
-
-            # if multiple courses were found and the websites match, open it
-            elif kind == "website" and all(
-                [
-                    courses[i].website == courses[i + 1].website
-                    for i in range(len(courses) - 1)
-                ]
-            ):
-                open_web_browser(courses[0].website)
-
             else:
                 exit_with_error("Multiple courses matching.")
 

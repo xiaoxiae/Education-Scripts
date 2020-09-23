@@ -137,7 +137,7 @@ def open_file_browser(path: str):
 
 def open_web_browser(url: str):
     """Opens the specified website in a web browser."""
-    call(web_browser + [url])
+    Popen(web_browser + [url], stdout=DEVNULL, stderr=DEVNULL)
 
 
 def open_in_text_editor(path: str):
