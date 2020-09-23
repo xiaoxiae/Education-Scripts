@@ -460,8 +460,12 @@ class Courses:
 
     def timeline(self, **kwargs):
         """List the courses in a timeline."""
-        beginning_minutes = int(7.34 * 60)  # starting time is 7:20
-        end_minutes = int(21 * 60)
+        beginning_minutes = 7 * 60 + 20  # starting time is 7:20
+        end_minutes = 21 * 60  # ending time is 21:00
+
+        def rtm(n, multiple=10):
+            """Round to multiple."""
+            return int(multiple * round(float(n) / multiple))
 
         interval = 100  # 100 minutes for each period (90 + 10)
 
@@ -502,11 +506,11 @@ class Courses:
 
                 # duration before course start
                 if j == 0:
-                    wait = (course.time.start - beginning_minutes) // 10
+                    wait = (rtm(course.time.start) - beginning_minutes) // 10
                 else:
-                    wait = (course.time.start - prev_course.time.end) // 10
+                    wait = (rtm(course.time.start) - rtm(prev_course.time.end)) // 10
 
-                duration = (course.time.end - course.time.start) // 10
+                duration = (rtm(course.time.end) - rtm(course.time.start)) // 10
 
                 # python's .center aligns right and it looks ugly
                 name = Ansi.color(course.abbreviation, course_types[course.type][0])
@@ -521,7 +525,7 @@ class Courses:
                 # last course padding after
                 if j == len(day) - 1:
                     course_padding = (
-                        beginning_minutes + total_minutes - course.time.end
+                        beginning_minutes + total_minutes - rtm(course.time.end)
                     ) // 10
                     break
             else:
