@@ -444,7 +444,7 @@ class Courses:
                 ]
 
                 for cron_schedule, body in messages:
-                    f.write(f"{cron_schedule} {user} {notify_command} '{body}'\n")
+                    f.write(f"{cron_schedule} {user}{hack} {notify_command} '{body}'\n")
 
             f.write(cron_file_comments["end"] + "\n")
 

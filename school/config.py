@@ -33,7 +33,7 @@ note_app = ["xournalpp", ".xopp"]  #  [app, extension]
 
 # default handler for Cron class notifications
 # the first argument after this command is the body of the notification
-notify_command = "dunstify 'School Schedule'"
+notify_command = "DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus dunstify 'School Schedule'"
 
 notify_started_message = "právě začal předmět"  # course started message
 notify_no_more_courses = "dnes již žádný další předmět není"  # no more courses today
