@@ -719,13 +719,17 @@ class Courses:
             for l in list(csv.reader(contents.splitlines(), delimiter=";"))[1:]:
                 uid, _, code, name, day, start, self, dur, _, _, _, weeks, teacher = l
 
+                # ATTENTION: watch out for 'and's here
+                # in order for the code not to crash, they do the following:
+                # - ''     and x -> ''
+                # - 'něco' and x -> x
                 out = {
                     "teacher": {"name": teacher},
-                    "classroom": self,
+                    "classroom": {"number": self},
                     "time": {
-                        "day": WD_EN[int(day) - 1].capitalize(),
-                        "start": int(start),  # TODO HH:MM formatting
-                        "end": int(start) + int(dur),  # TODO HH:MM formatting
+                        "day": day and WD_EN[int(day) - 1].capitalize(),
+                        "start": start and int(start),  # TODO HH:MM formatting
+                        "end": start and int(start) + int(dur),  # TODO HH:MM formatting
                         "weeks": "even"
                         if weeks == "sude"
                         else "odd"
