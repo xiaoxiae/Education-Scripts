@@ -38,7 +38,6 @@ parser.add_argument(
         "├── finals\n"
         "└── timeline\n"
         "cron\n"
-        "send <mail file>\n"
         "open\n"
         "├── course <course name/abbreviation>\n"
         "├── website <course name/abbreviation>\n"
@@ -76,7 +75,6 @@ action_tree = {
         "timeline": courses.timeline,
     },
     "cron": courses.compile_cron_jobs,
-    "send": partial(courses.send_mail, cwd),
     "open": {
         "course": partial(courses.open, "folder"),
         "website": partial(courses.open, "website"),

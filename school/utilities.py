@@ -9,7 +9,6 @@ from typing import *
 from yaml import safe_load, YAMLError
 
 from config import *
-from private_config import *
 
 WD_EN = (
     "monday",
