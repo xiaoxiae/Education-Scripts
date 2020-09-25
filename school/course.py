@@ -1,6 +1,7 @@
 import csv
 import os
 from datetime import timedelta, datetime, date
+from re import split
 
 import yaml
 from unidecode import unidecode
@@ -610,6 +611,13 @@ class Courses:
                 if d[key] == "" or d[key] == {}:
                     del d[key]
 
+        def format_teacher(teacher):
+            l = split(" doc\.|Ing\.|Ph.D\.|PhDr.|Mgr\.|RNDr\.|M\.Sc\.|Bc\.|Dr\.|D\.Phil\.|Ph\.|r\.", teacher)
+            l = [i.strip() for i in l]
+            l = [i.strip(",") for i in l if i not in (",", "")]
+            return " / ".join([" ".join(list(reversed(i.split()))) for i in l])
+
+
         if option == "":
             exit_with_error("No CSV to initialize from specified.")
 
@@ -623,6 +631,8 @@ class Courses:
             course_count = 0
             for l in list(csv.reader(contents.splitlines(), delimiter=";"))[1:]:
                 uid, _, code, name, day, start, self, dur, _, _, _, weeks, teacher = l
+
+                teacher = format_teacher(teacher)
 
                 # ATTENTION: watch out for 'and's here
                 # in order for the code not to crash, they do the following:
