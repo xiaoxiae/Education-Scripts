@@ -289,11 +289,14 @@ class Courses:
 
                 row = [
                     f"{name_surround_char}{course.name if not short else course.abbreviation}{name_surround_char}",
-                    f"{minutes_to_HHMM(course.time.start)} - {minutes_to_HHMM(course.time.end)}"
+                    f"{minutes_to_HHMM(course.time.start)} -"
+                    f" {minutes_to_HHMM(course.time.end)}"
                     + (
                         ""
                         if course.time.weeks is None
-                        else f" ({course.time.weeks if not short else course.time.weeks[0]})"
+                        else (
+                            f" ({course.time.weeks if not short else course.time.weeks[0]})"
+                        )
                     ),
                     "-" if course.classroom is None else course.classroom.number,
                 ]
@@ -365,7 +368,9 @@ class Courses:
 
         def get_cron_schedule(minutes: int, day: int) -> str:
             """Returns the cron schedule expression for the specified parameters."""
-            return f"{minutes % 60} {minutes // 60} * * {day + 1}"  # day + 1, since 0 == Sunday
+            return (  # day + 1, since 0 == Sunday
+                f"{minutes % 60} {minutes // 60} * * {day + 1}"
+            )
 
         def get_next_course_message(i: int, courses: list) -> str:
             """Returns the string of the cron job that should be ran for the upcoming course."""
@@ -439,7 +444,8 @@ class Courses:
                     ),
                     (
                         get_cron_schedule(course.time.start, course.weekday()),
-                        f"{notify_started_message} <i>{course.name} ({course.type})</i>.",
+                        f"{notify_started_message} <i>{course.name}"
+                        f" ({course.type})</i>.",
                     ),
                 ]
 
@@ -612,11 +618,30 @@ class Courses:
                     del d[key]
 
         def format_teacher(teacher):
-            l = split(" doc\.|Ing\.|Ph.D\.|PhDr.|Mgr\.|RNDr\.|M\.Sc\.|Bc\.|Dr\.|D\.Phil\.|Ph\.|r\.", teacher)
-            l = [i.strip() for i in l]
-            l = [i.strip(",") for i in l if i not in (",", "")]
+            l = split(
+                "|".join(
+                    [
+                        "doc\.",
+                        "Ing\.",
+                        "Ph.D\.",
+                        "CSc\.",
+                        "PhDr\.",
+                        "DrSc\.",
+                        "Mgr\.",
+                        "RNDr\.",
+                        "M\.Sc\.",
+                        "Bc\.",
+                        "Dr\.",
+                        "D\.Phil\.",
+                        "Ph\.",
+                        "r\.",
+                    ]
+                ),
+                teacher,
+            )
+            l = [i.strip().strip(",").strip() for i in l]
+            l = [i for i in l if i not in (",", "")]
             return " / ".join([" ".join(list(reversed(i.split()))) for i in l])
-
 
         if option == "":
             exit_with_error("No CSV to initialize from specified.")
@@ -636,8 +661,8 @@ class Courses:
 
                 # ATTENTION: watch out for 'and's here
                 # in order for the code not to crash, they do the following:
-                # - ''     and x -> ''
-                # - 'něco' and x -> x
+                #          '' and x -> ''
+                # 'something' and x -> x
                 out = {
                     "teacher": {"name": teacher},
                     "classroom": {"number": self},
