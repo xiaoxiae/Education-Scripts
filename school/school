@@ -53,7 +53,9 @@ parser.add_argument(
 )
 
 parser.add_argument("-s", "--short", action="store_true", help="shorten the output")
-parser.add_argument("-f", "--folder", help="set the courses folder (overrides config file)")
+parser.add_argument(
+    "-f", "--folder", help="set the courses folder (overrides config file)"
+)
 
 
 arguments = parser.parse_args()
@@ -62,26 +64,26 @@ courses = Courses(arguments.folder or courses_folder)
 homeworks = Homeworks(courses)
 
 action_tree = {
-    "homework": {
-        "list": homeworks.list,
-        "add": homeworks.add,
-        "edit": homeworks.edit,
-        "delete": homeworks.delete,
-        "complete": homeworks.complete,
+    ("homework",): {
+        ("list",): homeworks.list,
+        ("add", "new"): homeworks.add,
+        ("edit", "change"): homeworks.edit,
+        ("remove", "delete"): homeworks.delete,
+        ("complete", "finish"): homeworks.complete,
     },
-    "list": {
-        "courses": courses.list,
-        "finals": courses.finals,
-        "timeline": courses.timeline,
+    ("list",): {
+        ("courses",): courses.list,
+        ("finals",): courses.finals,
+        ("timeline",): courses.timeline,
     },
-    "cron": courses.compile_cron_jobs,
-    "open": {
-        "course": partial(courses.open, "folder"),
-        "website": partial(courses.open, "website"),
-        "notes": partial(courses.open, "notes"),
-        "online": partial(courses.open, "online"),
+    ("cron",): courses.compile_cron_jobs,
+    ("open",): {
+        ("course",): partial(courses.open, "folder"),
+        ("website",): partial(courses.open, "website"),
+        ("notes",): partial(courses.open, "notes"),
+        ("online",): partial(courses.open, "online"),
     },
-    "initialize": partial(courses.initialize, cwd),
+    ("initialize",): partial(courses.initialize, cwd),
 }
 
 
@@ -91,34 +93,35 @@ while len(arguments.actions) != 0 and type(action_tree) is dict:
 
     # sort the actions by their common prefix with the argument
     actions = sorted(
-        ([(1, a) if a.startswith(action) else (0, a) for a in action_tree])
+        (max([len(action) if s.startswith(action) else 0 for s in d]), d)
+        for d in action_tree
     )
 
     # if no match is found, quit with error
     if actions[-1][0] == 0:
-        exit_with_error(
-            f"'{action}' doesn't match actions in the action tree:"
-            f" {{{', '.join(action_tree)}}}."
+        sys.exit(
+            f"ERROR: '{action}' doesn't match actions in the action tree:"
+            f" {{{', '.join(' or '.join(d) for d in action_tree)}}}"
         )
 
-    # filter out the sub-optimal actions (i. e. those
-    while actions[0][0] != actions[-1][0]:
-        actions.pop(0)
+    # filter out the sub-optimal actions
+    actions = list(filter(lambda x: x[0] == actions[-1][0], actions))
 
     # if there are multiple optimal solutions, the command is ambiguous
     if len(actions) > 1:
-        exit_with_error(
-            f"Ambiguous actions for '{action}':"
-            f" {{{', '.join([a for _, a in actions])}}}"
+        sys.exit(
+            f"ERROR: Ambiguous actions for '{action}':"
+            f" {{{', '.join(' or '.join(d) for _, d in actions)}}}",
         )
-
-    # else follow the best solution
     else:
         action_tree = action_tree[actions[0][1]]
 
 # if the action tree isn't a function by now, exit; else extract the function
 if type(action_tree) is dict:
-    exit_with_error(f"Actions remaining: {{{', '.join(action_tree)}}}")
+    sys.exit(
+        "ERROR: Actions remaining:"
+        f" {{{', '.join(' or '.join(d) for d in action_tree)}}}"
+    )
 
 try:
     action_tree(*arguments.actions, **vars(arguments))
