@@ -235,3 +235,20 @@ def print_table(table: List[List[str]]):
                 )
 
     print(f"╰{'─' * (max_row_width + 2)}╯")
+
+
+def pick_one(l: list):
+    """Pick one of the items from the list."""
+    for i, item in enumerate(l):
+        print(f"{i + 1}) {item}")
+
+    while True:
+        try:
+            index = int(input("> ")) - 1
+        except ValueError:
+            continue
+
+        if not (0 <= index < len(l)):
+            continue
+
+        return l[index]

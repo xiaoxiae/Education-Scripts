@@ -54,7 +54,7 @@ class Course(Strict):
     time: Time = None
     classroom: Classroom = None
 
-    website: str = None
+    website: Union[str, list] = None
     online: str = None
     finals: Finals = None
 
@@ -567,10 +567,14 @@ class Courses:
             course = courses[0]
 
             if kind == "website":
-                if course.website is not None:
-                    open_web_browser(course.website)
-                else:
+                if course.website is None:
                     exit_with_error("The course has no website.")
+                elif isinstance(course.website, list):
+                    website = pick_one(course.website)
+                else:
+                    website = course.website
+
+                open_web_browser(website)
 
             elif kind == "folder":
                 open_file_browser(course.path())
