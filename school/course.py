@@ -518,10 +518,15 @@ class Courses:
 
                 duration = (rtm(course.time.end) - rtm(course.time.start)) // 10
 
-                # python's .center aligns right and it looks ugly
-                name = Ansi.color(course.abbreviation, course_types[course.type].color)
+                name = Ansi.color(
+                    course.abbreviation
+                    if len(course.abbreviation) <= (duration - 2)
+                    else course.abbreviation[: duration - 3] + ".",
+                    course_types[course.type].color,
+                )
 
-                if Ansi.len(name) % 2 == 0:
+                # python's .center aligns right and it looks ugly
+                if Ansi.len(name) % 2 == 0 and Ansi.len(name) != duration - 2:
                     name += " "
 
                 print_buffer[i] += (
