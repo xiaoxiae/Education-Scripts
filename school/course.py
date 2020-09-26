@@ -302,7 +302,7 @@ class Courses:
                 ]
 
                 # color the course name the appropriate color, depending on its type
-                row[0] = Ansi.color(row[0], course_types[course.type][0])
+                row[0] = Ansi.color(row[0], course_types[course.type].color)
 
                 # append useful information
                 table.append(row)
@@ -352,7 +352,7 @@ class Courses:
                 [
                     Ansi.color(
                         course.abbreviation if short else course.name,
-                        course_types[course.type][0],
+                        course_types[course.type].color,
                     ),
                     final.date.strftime("%_d. %-m. %Y"),
                     final.date.strftime("%_H:%M"),
@@ -519,7 +519,7 @@ class Courses:
                 duration = (rtm(course.time.end) - rtm(course.time.start)) // 10
 
                 # python's .center aligns right and it looks ugly
-                name = Ansi.color(course.abbreviation, course_types[course.type][0])
+                name = Ansi.color(course.abbreviation, course_types[course.type].color)
 
                 if Ansi.len(name) % 2 == 0:
                     name += " "

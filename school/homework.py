@@ -52,16 +52,20 @@ class Homeworks:
     def __init__(self, courses: Courses):
         self.courses = courses
 
+    def filter_by_homework(self, courses):
+        """Filter out courses that can't have homework."""
+        return [c for c in courses if course_types[c.type].has_homework]
+
     def get_homeworks(self, option: str = "", completed=False, undeadlined=True):
         """Get all homework( object)s, sorted by their due date. If option is specified,
         only get homework from specified courses."""
         homeworks = []
 
         # either get all homework, or only homework for a particular class
-        courses = (
+        courses = self.filter_by_homework(
             self.courses.get_sorted_courses()
             if option == ""
-            else self.courses.get_course_from_argument(option)
+            else self.filter_by_homework(self.courses.get_course_from_argument(option))
         )
 
         for course in courses:
@@ -116,7 +120,7 @@ class Homeworks:
                 str(homework.uid),
                 Ansi.color(
                     homework.course.abbreviation if short else homework.course.name,
-                    course_types[homework.course.type][0],
+                    course_types[homework.course.type].color,
                 ),
                 homework.name or "-",
                 "-"
@@ -152,7 +156,7 @@ class Homeworks:
 
     def add(self, option: str, **kwargs):
         """Edit a homework with the specified UID."""
-        courses = self.courses.get_course_from_argument(option)
+        courses = self.filter_by_homework(self.courses.get_course_from_argument(option))
 
         if len(courses) == 0:
             exit_with_error("No course matching the criteria.")

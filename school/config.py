@@ -1,4 +1,14 @@
 """A configuration file for the school script."""
+from dataclasses import dataclass
+
+
+@dataclass
+class CourseType:
+    """A class for various types of courses (lectures/labs/whatever)."""
+
+    color: int
+    has_homework: bool  # whether to also
+
 
 # the relative path to the folder where the courses are stored
 courses_folder = "courses/"
@@ -8,8 +18,8 @@ courses_folder = "courses/"
 # the numbers are ANSI colors that the course type will be painted with
 # see https://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
 course_types = {
-    "cvičení": (155,),
-    "přednáška": (153,),
+    "cvičení": CourseType(155, True),
+    "přednáška": CourseType(153, False),
 }
 
 
