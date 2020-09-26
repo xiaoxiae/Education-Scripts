@@ -1,7 +1,4 @@
 """A module for handling homework."""
-# TODO: special deadline attributes ('next this course occurrence)
-# TODO: clone command for duplicating prolonged homework
-# - might need to dump yaml, so replacing the sed os call might be a good idea...
 import os
 from datetime import date, datetime
 from random import choice
@@ -42,7 +39,7 @@ class Homework(Strict):
     @classmethod
     def get_uid(cls):
         """Generate a homework UID. Size 2 gives 26^2 = 676. That should be more than
-        enough individual homework assignments for a semester"""
+        enough individual homework assignments for a semester. I hope."""
         return "".join([choice(ascii_lowercase) for _ in range(2)])
 
 

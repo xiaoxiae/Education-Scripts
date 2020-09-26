@@ -2,7 +2,7 @@
 
 import sys
 from dataclasses import *
-from re import compile
+import re
 from subprocess import call, Popen, DEVNULL
 from typing import *
 
@@ -62,8 +62,7 @@ class Strict:
         if is_dataclass(c):
             fieldtypes = {f.name: f.type for f in fields(c)}
             return c(**{f: cls._from_dictionary(fieldtypes[f], d[f]) for f in d})
-        else:
-            return d
+        return d
 
     @classmethod
     def _from_file(cls, path: str):
@@ -176,7 +175,7 @@ class Ansi:
 
     @classmethod
     def escape(cls, text):
-        return compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])").sub("", text)
+        return re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])").sub("", text)
 
     @classmethod
     def __align(cls, text: str, length: int, function: str, *args, **kwargs):
@@ -248,7 +247,7 @@ def pick_one(l: list):
         except ValueError:
             continue
 
-        if not (0 <= index < len(l)):
+        if not 0 <= index < len(l):
             continue
 
         return l[index]
