@@ -18,8 +18,8 @@ courses_folder = "courses/"
 # the numbers are ANSI colors that the course type will be painted with
 # see https://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
 course_types = {
-    "cvičení": CourseType(155, True),
-    "přednáška": CourseType(153, False),
+    "cvičení": CourseType(118, True),
+    "přednáška": CourseType(39, False),
 }
 
 
