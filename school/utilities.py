@@ -243,7 +243,11 @@ def pick_one(l: list):
 
     while True:
         try:
-            index = int(input("> ")) - 1
+            val = input("Pick one (leave blank for 1): ")
+            if val == "":
+                index = 0
+            else:
+                index = int(val) - 1
         except ValueError:
             continue
 
