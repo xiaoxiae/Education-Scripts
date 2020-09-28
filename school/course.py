@@ -466,12 +466,13 @@ class Courses:
 
     def timeline(self, **kwargs):
         """List the courses in a timeline."""
-        beginning_minutes = 7 * 60 + 20  # starting time is 7:20
-        end_minutes = 21 * 60  # ending time is 21:00
 
         def rtm(n, multiple=10):
             """Round to multiple."""
             return int(multiple * round(float(n) / multiple))
+
+        beginning_minutes = 7 * 60 + 20  # starting time is 7:20
+        end_minutes = 21 * 60  # ending time is 21:00
 
         interval = 100  # 100 minutes for each period (90 + 10)
 
@@ -516,21 +517,22 @@ class Courses:
                 else:
                     wait = (rtm(course.time.start) - rtm(prev_course.time.end)) // 10
 
-                duration = (rtm(course.time.end) - rtm(course.time.start)) // 10
+                # the space between { and }
+                space = (rtm(course.time.end) - rtm(course.time.start)) // 10 - 2
 
                 name = Ansi.color(
                     course.abbreviation
-                    if len(course.abbreviation) <= (duration - 2)
-                    else course.abbreviation[: duration - 3] + ".",
+                    if len(course.abbreviation) <= (space)
+                    else course.abbreviation[: space - 1] + ".",
                     course_types[course.type].color,
                 )
 
                 # python's .center aligns right and it looks ugly
-                if Ansi.len(name) % 2 == 0 and Ansi.len(name) != duration - 2:
+                if Ansi.len(name) % 2 == 0 and Ansi.len(name) != space:
                     name += " "
 
                 print_buffer[i] += (
-                    " " * wait + "{" + Ansi.center(name, duration - 2) + "}"
+                    " " * wait + "{" + Ansi.center(name, space) + "}"
                 )
 
                 # last course padding after
