@@ -64,7 +64,7 @@ class Course(Strict):
 
         return (
             False
-            if self.time is not None
+            if self.time is None
             else (
                 today.weekday() == self.weekday()
                 and self.time.start <= today.hour * 60 + today.minute <= self.time.end
