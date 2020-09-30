@@ -54,9 +54,12 @@ class Course(Strict):
     time: Time = None
     classroom: Classroom = None
 
-    website: Union[str, List[int]] = None
+    website: Union[str, List[str]] = None
     online: str = None
     finals: Finals = None
+
+    # links to resources that are to be periodically updated with 'course update'
+    resources: List[List[str]] = None
 
     def is_ongoing(self) -> bool:
         """Returns True if the course is ongoing and False if not."""
@@ -320,7 +323,6 @@ class Courses:
                     ]
                 )
 
-        # if no courses were added since the days didn't match, exit with a message
         if len(table) == 0:
             exit_with_error("No courses matching the criteria found!")
 
@@ -563,11 +565,9 @@ class Courses:
         # if no argument is specified, default to getting the current or the next course
         courses = self.get_course_from_argument(option)
 
-        # if none were found
         if len(courses) == 0:
             exit_with_error("No course matching the criteria.")
 
-        # if one was found
         elif len(courses) == 1:
             course = courses[0]
 
@@ -607,7 +607,6 @@ class Courses:
                 else:
                     exit_with_error("The course has no online link.")
 
-        # if multiple were found
         else:
             # if multiple courses were found and they're all the same (but different
             # type), open the general course folder
@@ -730,3 +729,33 @@ class Courses:
                 course_count += 1
 
         exit_with_success(f"New semester with {course_count} courses initialized.")
+
+    def update_resources(self, option: str = "", **kwargs):
+        """Update the resources of a given course."""
+        courses = (
+            self.get_course_from_argument(option)
+            if option != ""
+            else self.get_sorted_courses(include_unscheduled=True)
+        )
+
+        if len(courses) == 0:
+            exit_with_error("No course matching the criteria.")
+
+        for course in courses:
+            course_prefix = f"[{course.abbreviation}-{course.type[0]}]"
+
+            if course.resources is None:
+                print(f"{course_prefix} no resources, skipping.")
+                continue
+
+            folder = os.path.join(course.path(), "resources")
+
+            if not os.path.exists(folder):
+                os.mkdir(folder)
+
+            for name, url in course.resources:
+                print(f"{course_prefix} saving '{name}' from '{url}'")
+                try:
+                    download_file(url, os.path.join(folder, name))
+                except Exception as e:
+                    print(f"{course_prefix} saving '{name}' failed with {e}")

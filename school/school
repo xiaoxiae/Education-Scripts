@@ -37,6 +37,8 @@ parser.add_argument(
         "├── courses <when>\n"
         "├── finals\n"
         "└── timeline\n"
+        "resources\n"
+        "└── get or update <course name/abbreviation>\n"
         "cron\n"
         "open\n"
         "├── course <course name/abbreviation>\n"
@@ -44,11 +46,11 @@ parser.add_argument(
         "└── notes <course name/abbreviation>\n"
         "initialize\n"
         "homework\n"
-        "├── list <course name/abbreviation>\n"
-        "├── add <course name/abbreviation>\n"
-        "├── edit <homework UID>\n"
-        "├── delete <homework UID>\n"
-        "└── complete <homework UID>\n"
+        "├── list <course name/abbreviation/'all'>\n"
+        "├── add or new <course name/abbreviation>\n"
+        "├── edit or change <homework UID>\n"
+        "├── remove or delete <homework UID>\n"
+        "└── complete or finish <homework UID>\n"
     ),
 )
 
@@ -64,18 +66,12 @@ courses = Courses(arguments.folder or courses_folder)
 homeworks = Homeworks(courses)
 
 action_tree = {
-    ("homework",): {
-        ("list",): homeworks.list,
-        ("add", "new"): homeworks.add,
-        ("edit", "change"): homeworks.edit,
-        ("remove", "delete"): homeworks.delete,
-        ("complete", "finish"): homeworks.complete,
-    },
     ("list",): {
         ("courses",): courses.list,
         ("finals",): courses.finals,
         ("timeline",): courses.timeline,
     },
+    ("resources",): {("get", "update"): courses.update_resources},
     ("cron",): courses.compile_cron_jobs,
     ("open",): {
         ("course",): partial(courses.open, "folder"),
@@ -84,6 +80,13 @@ action_tree = {
         ("online",): partial(courses.open, "online"),
     },
     ("initialize",): partial(courses.initialize, cwd),
+    ("homework",): {
+        ("list",): homeworks.list,
+        ("add", "new"): homeworks.add,
+        ("edit", "change"): homeworks.edit,
+        ("remove", "delete"): homeworks.delete,
+        ("complete", "finish"): homeworks.complete,
+    },
 }
 
 

@@ -5,6 +5,10 @@ from dataclasses import *
 import re
 from subprocess import call, Popen, DEVNULL
 from typing import *
+import urllib.request
+import time
+import calendar
+import os
 
 from yaml import safe_load, YAMLError
 import typesentry
@@ -253,3 +257,24 @@ def pick_one(l: list):
             continue
 
         return l[index]
+
+def download_file(url, path):
+    """Download a file from a url to a given path. Only do so if it changed since last
+    download (or if downloading for the first time). Shamelessly stolen from:
+    https://stackoverflow.com/questions/16650608/adding-timestamp-to-file-downloaded-with-urllib-urlretrieve"""
+    opener = urllib.request.build_opener()
+    if os.path.isfile(path):
+        timestamp = os.path.getmtime(path)
+        timestr = time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime(timestamp))
+        opener.addheaders.append(("If-Modified-Since", timestr))
+    urllib.request.install_opener(opener)
+    try:
+        path, headers = urllib.request.urlretrieve(url, path)
+        if 'Last-Modified' in headers:
+            mtime = calendar.timegm(time.strptime(headers['Last-Modified'], '%a, %d %b %Y %H:%M:%S GMT'))
+            os.utime(path, (mtime, mtime))
+    except urllib.error.HTTPError as e:
+        if e.code != 304:
+            raise e
+    urllib.request.install_opener(urllib.request.build_opener())  # Reset opener
+    return path
