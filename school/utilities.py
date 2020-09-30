@@ -7,8 +7,10 @@ from subprocess import call, Popen, DEVNULL
 from typing import *
 
 from yaml import safe_load, YAMLError
+import typesentry
 
 from config import *
+
 
 WD_EN = (
     "monday",
@@ -21,6 +23,11 @@ WD_EN = (
 )
 
 
+def check_type(instance, type_hint):
+    """Return True if instance corresponds to its type hint."""
+    return typesentry.Config().is_type(instance, type_hint)
+
+
 @dataclass
 class Strict:
     """A class for strictly checking whether each of the dataclass variable types match."""
@@ -30,24 +37,12 @@ class Strict:
         for name, field_type in self.__annotations__.items():
             value = self.__dict__[name]
 
-            # ignore None values and Any types
-            if value is None or field_type is Any:
-                continue
-
-            # go through all of the field types and check the types
-            for f in (
-                get_args(field_type)
-                if get_origin(field_type) is Union
-                else [field_type]
-            ):
-                if isinstance(value, f):
-                    break
-            else:
+            if value is not None and not check_type(value, field_type):
                 raise TypeError(
                     f"The key '{name}' "
-                    + f"in class {self.__class__.__name__} "
-                    + f"expected type '{field_type.__name__}' "
-                    + f"but got type '{type(value).__name__}' instead."
+                    + f"in {self.__class__.__name__} "
+                    + f"expected type '{field_type}' "
+                    + f"but got '{value}' instead."
                 )
 
     @classmethod

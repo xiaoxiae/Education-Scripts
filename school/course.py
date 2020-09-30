@@ -11,8 +11,8 @@ from utilities import *
 
 @dataclass
 class Teacher(Strict):
-    name: Union[str, list]
-    email: Union[str, list] = None
+    name: Union[str, List[str]]
+    email: Union[str, List[str]] = None
     website: str = None
     office: str = None
     note: str = None
@@ -54,7 +54,7 @@ class Course(Strict):
     time: Time = None
     classroom: Classroom = None
 
-    website: Union[str, list] = None
+    website: Union[str, List[int]] = None
     online: str = None
     finals: Finals = None
 
