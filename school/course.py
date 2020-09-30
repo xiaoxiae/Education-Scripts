@@ -531,9 +531,7 @@ class Courses:
                 if Ansi.len(name) % 2 == 0 and Ansi.len(name) != space:
                     name += " "
 
-                print_buffer[i] += (
-                    " " * wait + "{" + Ansi.center(name, space) + "}"
-                )
+                print_buffer[i] += " " * wait + "{" + Ansi.center(name, space) + "}"
 
                 # last course padding after
                 if j == len(day) - 1:
@@ -617,6 +615,7 @@ class Courses:
 
     def initialize(self, cwd: str, option: str = "", **kwargs):
         """Initialize a new year from a CSV from SIS (found in Rozvrh NG -> CSV)."""
+        # TODO: make the times when the courses start prettier
         path = os.path.join(cwd, option)
 
         def recursive_dictionary_clear(d):
@@ -629,6 +628,8 @@ class Courses:
                     del d[key]
 
         def format_teacher(teacher):
+            """An ungly, hard-coded way to format the names of the teachers. Couldn't
+            find something more solid, so this will have to do for now."""
             l = split(
                 "|".join(
                     [

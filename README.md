@@ -104,10 +104,10 @@ Leaving `course` empty selects the ongoing (or upcoming if there is no ongoing) 
 Open the course with the specified name/abbreviation in the file browser specified in the script configuration.
 
 ##### `open website <course>`
-Open the website of the course in the file browser specified in the configuration.
+Open the website of the course in the file browser specified in the configuration. If multiple websites are found, an option is presented to open one.
 
 ##### `open notes <course>`
-Open the `notes.<note app extension>` file in the given course's directory in the note app specified in the configuration.
+Open the `notes.<note app extensions>` file in the given course's directory in the note app specified in the configuration. If multiple files are found, an option is presented to open one.
 
 ##### `open online <course>`
 Open the course's online link in the file browser specified in the configuration. Meant to be a Zoom (or Zoom-like service) link, which will likely differ from the course's website.
