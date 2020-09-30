@@ -585,13 +585,21 @@ class Courses:
                 open_file_browser(course.path())
 
             elif kind == "notes":
-                path = os.path.join(course.path(), f"notes{note_app[1]}")
+                files = [f for f in os.listdir(course.path()) if f.startswith("notes")]
 
-                # check if the default notes exist
-                if not os.path.isfile(path):
+                if len(files) == 0:
                     exit_with_error("The course has no notes.")
+
+                f = pick_one(files)
+
+                for ext in note_handlers:
+                    if f.endswith(ext):
+                        open_in_note_app(
+                            note_handlers[ext], os.path.join(course.path(), f)
+                        )
+                        break
                 else:
-                    open_in_note_app(path)
+                    exit_with_error("The note type has no associated handler.")
 
             elif kind == "online":
                 if course.online is not None:

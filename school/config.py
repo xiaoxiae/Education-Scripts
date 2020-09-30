@@ -27,7 +27,7 @@ course_types = {
 file_browser = ["ranger"]
 web_browser = ["qutebrowser", "--target", "window"]
 text_editor = ["vim"]
-note_app = ["xournalpp", ".xopp"]  #  [app, extension]
+note_handlers = {".xopp": "xournalpp", ".md": "vim"}
 
 
 # default handler for Cron class notifications

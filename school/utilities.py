@@ -138,10 +138,9 @@ def open_in_text_editor(path: str):
     call(text_editor + [path])
 
 
-def open_in_note_app(path: str):
-    """Opens the specified Xournal++ file in Xournal++."""
-    # suppress the warnings, since Xournal++ talks way too much
-    Popen([note_app[0], path], stdout=DEVNULL, stderr=DEVNULL)
+def open_in_note_app(app: str, path: str):
+    """Opens the specified file in its associated note app."""
+    call([app, path])
 
 
 class Ansi:
@@ -233,6 +232,10 @@ def print_table(table: List[List[str]]):
 
 def pick_one(l: list):
     """Pick one of the items from the list."""
+    # special case for picking only one item
+    if len(l) == 1:
+        return l[0]
+
     for i, item in enumerate(l):
         print(f"{i + 1}) {item}")
 
