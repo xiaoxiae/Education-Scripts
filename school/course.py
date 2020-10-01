@@ -1,7 +1,7 @@
 import csv
 import os
 from datetime import timedelta, datetime, date
-from re import split
+from re import split, match
 
 import yaml
 from unidecode import unidecode
@@ -59,7 +59,9 @@ class Course(Strict):
     finals: Finals = None
 
     # links to resources that are to be periodically updated with 'course update'
-    resources: List[List[str]] = None
+    # either ["filename", "url"] or
+    # either [["thing to match in hrefs of all urls 1", "thing...", ...], "url"]
+    resources: List[List[Union[str, List[str]]]] = None
 
     def is_ongoing(self) -> bool:
         """Returns True if the course is ongoing and False if not."""
@@ -738,6 +740,16 @@ class Courses:
             else self.get_sorted_courses(include_unscheduled=True)
         )
 
+        def try_download_file(folder, name, url):
+            print(f"{course_prefix} saving '{name}' from '{url}'")
+            try:
+                if not os.path.exists(folder):
+                    os.mkdir(folder)
+
+                download_file(url, os.path.join(folder, name))
+            except Exception as e:
+                print(f"{course_prefix} saving '{name}' failed with '{e}'")
+
         if len(courses) == 0:
             exit_with_error("No course matching the criteria.")
 
@@ -750,12 +762,15 @@ class Courses:
 
             folder = os.path.join(course.path(), "resources")
 
-            if not os.path.exists(folder):
-                os.mkdir(folder)
-
             for name, url in course.resources:
-                print(f"{course_prefix} saving '{name}' from '{url}'")
-                try:
-                    download_file(url, os.path.join(folder, name))
-                except Exception as e:
-                    print(f"{course_prefix} saving '{name}' failed with {e}")
+                if check_type(name, List[str]):
+                    for u in get_website_links(url):
+                        for n in name:
+                            if match(n, u):
+                                try_download_file(
+                                    folder,
+                                    u if not u.startswith("http") else n,
+                                    u if u.startswith("http") else url + u,
+                                )
+                else:
+                    try_download_file(folder, name, url)

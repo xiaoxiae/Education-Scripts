@@ -1,3 +1,5 @@
 unidecode
 pyyaml
 typesentry
+beautifulsoup4
+httplib2

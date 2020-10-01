@@ -209,7 +209,9 @@ website: https://www.google.com
 online: https://zoom.us/j/96931706150
 
 resources:
-- ["My file.pdf", "https://www.website.com/some_file.pdf"]
+- ["My file.pdf", "https://www.website.com/some_file.pdf"]  # single files
+- ["My file 2.pdf", "https://www.website.com/some_other_file.pdf"]
+- [[".*.pdf"], "https://www.anotherwebsite.com/"]  # all files ending with .pdf
 ```
 
 ### Flags
