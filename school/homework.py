@@ -3,6 +3,7 @@ import os
 from datetime import date, datetime
 from random import choice
 from string import ascii_lowercase
+from subprocess import call
 
 from course import Course, Courses
 from utilities import *
@@ -144,6 +145,10 @@ class Homeworks:
 
     def edit(self, uid: str, **kwargs):
         """Edit a homework with the specified UID."""
+        def open_in_text_editor(path: str):
+            """Opens the specified website in a web browser."""
+            call(text_editor + [path])
+
         for homework in self.get_homeworks(completed=True, undeadlined=True):
             if homework.uid == uid:
                 open_in_text_editor(homework.path)

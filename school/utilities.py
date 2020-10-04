@@ -1,22 +1,20 @@
 """A class that contains various useful utility methods."""
 
-import sys
-from dataclasses import *
-import re
-from subprocess import call, Popen, DEVNULL
-from typing import *
-import urllib.request
-import httplib2
-import time
 import calendar
 import os
+import re
+import sys
+import time
+import urllib.request
+from dataclasses import *
+from typing import *
 
-from yaml import safe_load, YAMLError
+import httplib2
 import typesentry
 from bs4 import BeautifulSoup, SoupStrainer
+from yaml import YAMLError, safe_load
 
 from config import *
-
 
 WD_EN = (
     "monday",
@@ -78,11 +76,6 @@ class Strict:
             exit_with_error(f"Invalid key {e}", path)
 
 
-def weekday_en_index(day: str) -> int:
-    """Return the index of the day in a week."""
-    return WD_EN.index(day)
-
-
 def minutes_to_HHMM(minutes: int) -> str:
     """Converts a number of minutes to a string in the form HH:MM."""
     return f"{str(minutes // 60).rjust(2)}:{minutes % 60:02d}"
@@ -127,26 +120,6 @@ def due_message_from_timedelta(delta):
     due_msg = due_msg.strip().strip(",")
 
     return due_msg
-
-
-def open_file_browser(path: str):
-    """Opens the specified path in a file browser."""
-    call(file_browser + [path])
-
-
-def open_web_browser(url: str):
-    """Opens the specified website in a web browser."""
-    Popen(web_browser + [url], stdout=DEVNULL, stderr=DEVNULL)
-
-
-def open_in_text_editor(path: str):
-    """Opens the specified website in a web browser."""
-    call(text_editor + [path])
-
-
-def open_in_note_app(app: str, path: str):
-    """Opens the specified file in its associated note app."""
-    call([app, path])
 
 
 class Ansi:

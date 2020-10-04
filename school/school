@@ -91,7 +91,7 @@ action_tree = {
 
 
 # go down the action tree
-while len(arguments.actions) != 0 and type(action_tree) is dict:
+while len(arguments.actions) != 0 and isinstance(action_tree, dict):
     action = arguments.actions.pop(0)
 
     # sort the actions by their common prefix with the argument
@@ -120,7 +120,7 @@ while len(arguments.actions) != 0 and type(action_tree) is dict:
         action_tree = action_tree[actions[0][1]]
 
 # if the action tree isn't a function by now, exit; else extract the function
-if type(action_tree) is dict:
+if isinstance(action_tree, dict):
     sys.exit(
         "ERROR: Actions remaining:"
         f" {{{', '.join(' or '.join(d) for d in action_tree)}}}"

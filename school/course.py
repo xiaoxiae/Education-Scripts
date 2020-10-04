@@ -1,7 +1,8 @@
 import csv
 import os
-from datetime import timedelta, datetime, date
-from re import split, match
+from datetime import date, datetime, timedelta
+from re import match, split
+from subprocess import call, Popen, DEVNULL
 
 import yaml
 from unidecode import unidecode
@@ -78,7 +79,7 @@ class Course(Strict):
 
     def weekday(self) -> int:
         """Get the weekday the course is on (counting from 0)."""
-        return weekday_en_index(self.time.day.lower())
+        return WD_EN.index(self.time.day.lower())
 
     def path(self, ignore_type: bool = False) -> str:
         """Returns the path of the course (possibly ignoring the type)."""
@@ -564,6 +565,23 @@ class Courses:
 
     def open(self, kind: str, option: str = "", **kwargs):
         """Open the course's something."""
+
+        def open_file_browser(path: str):
+            """Opens the specified path in a file browser."""
+            call(file_browser + [path])
+
+        def open_web_browser(url: str):
+            """Opens the specified website in a web browser."""
+            Popen(web_browser + [url], stdout=DEVNULL, stderr=DEVNULL)
+
+        def open_in_text_editor(path: str):
+            """Opens the specified website in a web browser."""
+            call(text_editor + [path])
+
+        def open_in_note_app(app: str, path: str):
+            """Opens the specified file in its associated note app."""
+            call([app, path])
+
         # if no argument is specified, default to getting the current or the next course
         courses = self.get_course_from_argument(option)
 
@@ -630,7 +648,7 @@ class Courses:
         def recursive_dictionary_clear(d):
             """Recursively clear dictionary keys with empty values."""
             for key in list(d):
-                if type(d[key]) == dict:
+                if isinstance(d[key], dict):
                     recursive_dictionary_clear(d[key])
 
                 if d[key] == "" or d[key] == {}:
