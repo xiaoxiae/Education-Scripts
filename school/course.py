@@ -785,10 +785,11 @@ class Courses:
                     for u in get_website_links(url):
                         for n in name:
                             if match(n, u):
-                                try_download_file(
-                                    folder,
-                                    u if not u.startswith("http") else n,
-                                    u if u.startswith("http") else url + u,
-                                )
+                                if not u.startswith("http"):
+                                    u = url + u
+
+                                proper_name = u.split("/")[-1]
+
+                                try_download_file(folder, proper_name, u)
                 else:
                     try_download_file(folder, name, url)

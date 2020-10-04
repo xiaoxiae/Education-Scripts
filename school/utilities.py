@@ -265,7 +265,10 @@ def get_website_links(url):
     links = []
 
     for link in BeautifulSoup(response, parse_only=SoupStrainer("a"), features="lxml"):
-        if link.has_attr("href"):
-            links.append(link["href"])
+        try:
+            if link.has_attr("href"):
+                links.append(link["href"])
+        except Exception:
+            pass
 
     return links
