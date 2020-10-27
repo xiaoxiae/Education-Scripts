@@ -7,7 +7,7 @@ class CourseType:
     """A class for various types of courses (lectures/labs/whatever)."""
 
     color: int
-    has_homework: bool  # whether to also
+    has_homework: bool
 
 
 # the relative path to the folder where the courses are stored

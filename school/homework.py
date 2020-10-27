@@ -114,26 +114,18 @@ class Homeworks:
                 elif delta.days < 0:
                     due_msg = f"overdue ({due_msg})"
 
+            # highlight names that have a description
+            name_highlight = lambda x: (x if homework.description is None else Ansi.bold(x))
+
             row = [
                 str(homework.uid),
                 Ansi.color(
                     homework.course.abbreviation if short else homework.course.name,
                     course_types[homework.course.type].color,
                 ),
-                homework.name or "-",
-                "-"
-                if homework.deadline is None
-                else homework.deadline.strftime("%_d. %-m. %Y"),
-                "-"
-                if homework.deadline is None
-                else homework.deadline.strftime("%_H:%M"),
+                name_highlight(homework.name or "-"),
                 due_msg,
             ]
-
-            # don't show the date, only show in how long is it due
-            if short:
-                row.pop(3)
-                row.pop(3)
 
             table.append(row)
 
@@ -145,6 +137,7 @@ class Homeworks:
 
     def edit(self, uid: str, **kwargs):
         """Edit a homework with the specified UID."""
+
         def open_in_text_editor(path: str):
             """Opens the specified website in a web browser."""
             call(text_editor + [path])
@@ -152,12 +145,13 @@ class Homeworks:
         for homework in self.get_homeworks(completed=True, undeadlined=True):
             if homework.uid == uid:
                 open_in_text_editor(homework.path)
+                self.list("")
                 return
 
         exit_with_error(f"No homework with UID '{uid}' found.")
 
     def add(self, option: str, **kwargs):
-        """Edit a homework with the specified UID."""
+        """Add a new homework."""
         courses = self.filter_by_homework(self.courses.get_course_from_argument(option))
 
         if len(courses) == 0:
