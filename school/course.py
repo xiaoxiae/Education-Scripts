@@ -758,7 +758,7 @@ class Courses:
 
         exit_with_success(f"New semester with {course_count} courses initialized.")
 
-    def update_resources(self, option: str = "", **kwargs):
+    def resources(self, option: str = "", **kwargs):
         """Update the resources of a given course."""
         courses = (
             self.get_course_from_argument(option)
@@ -766,38 +766,51 @@ class Courses:
             else self.get_sorted_courses(include_unscheduled=True)
         )
 
-        def try_download_file(folder, name, url):
-            print(f"{course_prefix} saving '{name}' from '{url}'")
+        def try_download(handler, url, folder, name, prefix):
+            """Attempt to download the resource. Throw an exception if unsuccessful."""
+            print(
+                f"{prefix} saving '{name}' from '{url}'... ", end="", flush=True,
+            )
+
             try:
                 if not os.path.exists(folder):
                     os.mkdir(folder)
 
-                download_file(url, os.path.join(folder, name))
+                handler(url, os.path.join(folder, name))
+                print("success!")
             except Exception as e:
-                print(f"{course_prefix} saving '{name}' failed with '{e}'")
+                print(f"failed with '{e}'.")
 
         if len(courses) == 0:
             exit_with_error("No course matching the criteria.")
 
         for course in courses:
-            course_prefix = f"[{course.abbreviation}-{course.type[0]}]"
+            urls = course.resources
+            handler = download_file
+            prefix = f"[{course.abbreviation}-{course.type[0]}: {kind}]"
 
-            if course.resources is None:
-                print(f"{course_prefix} no resources, skipping.")
+            # skip courses without resources/videos
+            if urls is None:
                 continue
 
-            folder = os.path.join(course.path(), "resources")
+            folder = os.path.join(course.path(), kind)
 
-            for name, url in course.resources:
+            for name, url in urls:
                 if check_type(name, List[str]):
                     for u in get_website_links(url):
                         for n in name:
                             if match(n, u):
                                 if not u.startswith("http"):
+                                    if not url.endswith("/"):
+                                        url = url[: -len(url.split("/")[-1])]
+                                    elif u.startswith("/"):
+                                        # TODO
+                                        pass
+
                                     u = url + u
 
                                 proper_name = u.split("/")[-1]
 
-                                try_download_file(folder, proper_name, u)
+                                try_download(handler, u, folder, proper_name, prefix)
                 else:
-                    try_download_file(folder, name, url)
+                    try_download(handler, url, folder, name, prefix)

@@ -37,8 +37,7 @@ parser.add_argument(
         "├── courses <when>\n"
         "├── finals\n"
         "└── timeline\n"
-        "resources\n"
-        "└── get or update <course name/abbreviation>\n"
+        "resources <course name/abbreviation>\n"
         "cron\n"
         "open\n"
         "├── course <course name/abbreviation>\n"
@@ -71,7 +70,7 @@ action_tree = {
         ("finals",): courses.finals,
         ("timeline",): courses.timeline,
     },
-    ("resources",): {("get", "update"): courses.update_resources},
+    ("resources",): courses.resources,
     ("cron",): courses.compile_cron_jobs,
     ("open",): {
         ("course",): partial(courses.open, "folder"),
