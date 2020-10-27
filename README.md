@@ -67,6 +67,28 @@ Lists all of the courses. The `<when>` can be either empty (listing all courses)
 ╰─────────────────────────────────────────────────────────────────╯
 ```
 
+If `<when>` is plain, only a simple list is produced:
+```
+ADS++-c
+ADS-c
+ADS-p
+AP-p
+C-c
+DPP-c
+DPP-p
+IPS-c
+LA-c
+LA-p
+LINUX-c
+LINUX-p
+MA-c
+MA-p
+PROG-c
+PROG-p
+PS-c
+PS-p
+```
+
 #### `list finals`
 Lists finals for all courses. To add a final, one must add the `final` attribute to `info.yaml`:
 ```
