@@ -251,6 +251,11 @@ class Courses:
         """Lists information about the courses."""
         courses = self.get_sorted_courses()
 
+        if option == "plain":
+            for course in sorted(courses, key=lambda x: x.abbreviation + x.type):
+                print(f"{course.abbreviation}-{course.type[0]}")
+            quit()
+
         current_day = datetime.today()
         current_weekday = current_day.weekday()
 
