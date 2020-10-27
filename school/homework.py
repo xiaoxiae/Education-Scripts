@@ -61,7 +61,7 @@ class Homeworks:
 
         # either get all homework, or only homework for a particular class
         courses = self.filter_by_homework(
-            self.courses.get_sorted_courses()
+            self.courses.get_sorted_courses(include_unscheduled=True)
             if option == ""
             else self.filter_by_homework(self.courses.get_course_from_argument(option))
         )
