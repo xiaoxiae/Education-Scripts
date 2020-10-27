@@ -40,16 +40,17 @@ parser.add_argument(
         "resources <course name/abbreviation>\n"
         "cron\n"
         "open\n"
-        "├── course <course name/abbreviation>\n"
+        "├── course  <course name/abbreviation>\n"
         "├── website <course name/abbreviation>\n"
-        "└── notes <course name/abbreviation>\n"
+        "└── notes   <course name/abbreviation>\n"
         "initialize\n"
         "homework\n"
-        "├── list <course name/abbreviation/'all'>\n"
-        "├── add or new <course name/abbreviation>\n"
-        "├── edit or change <homework UID>\n"
-        "├── remove or delete <homework UID>\n"
-        "└── complete or finish <homework UID>\n"
+        "├── list                   <course name/abbreviation/'all'>\n"
+        "├── add or new             <course name/abbreviation>\n"
+        "├── edit                   <homework UID>\n"
+        "├── remove or delete       <homework UID>\n"
+        "├── complete or finish     <homework UID>\n"
+        "└── incomplete or unfinish <homework UID>\n"
     ),
 )
 
@@ -82,9 +83,10 @@ action_tree = {
     ("homework",): {
         ("list",): homeworks.list,
         ("add", "new"): homeworks.add,
-        ("edit", "change"): homeworks.edit,
+        ("edit",): homeworks.edit,
         ("remove", "delete"): homeworks.delete,
         ("complete", "finish"): homeworks.complete,
+        ("incomplete", "unfinish"): homeworks.incomplete,
     },
 }
 

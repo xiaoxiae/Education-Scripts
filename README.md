@@ -26,11 +26,12 @@ school
 │   └── notes   <course name/abbreviation>
 ├── initialize
 └── homework
-    ├── list               <course name/abbreviation/'all'>
-    ├── add or new         <course name/abbreviation>
-    ├── edit or change     <homework UID>
-    ├── remove or delete   <homework UID>
-    └── complete or finish <homework UID>
+    ├── list                   <course name/abbreviation/'all'>
+    ├── add or new             <course name/abbreviation>
+    ├── edit                   <homework UID>
+    ├── remove or delete       <homework UID>
+    ├── complete or finish     <homework UID>
+    └── incomplete or unfinish <homework UID>\n"
 ```
 
 #### `list courses`

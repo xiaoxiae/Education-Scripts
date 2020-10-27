@@ -8,6 +8,7 @@ import time
 import urllib.request
 from dataclasses import *
 from typing import *
+from subprocess import Popen, PIPE
 
 import httplib2
 import typesentry
@@ -195,7 +196,7 @@ def print_table(table: List[List[str]]):
         if len(row) == 1:
             print(
                 (f"{' ' * max_row_width} │\n├─" if i != 0 else "")
-                + Ansi.center(Ansi.bold(f"◀ {row[0]} ▶"), max_row_width, "─")
+                + Ansi.center(Ansi.bold(f"{{ {row[0]} }}"), max_row_width, "─")
                 + ("─╮" if i == 0 else "─┤")
             )
         else:

@@ -198,6 +198,7 @@ class Homeworks:
         for homework in self.get_homeworks(completed=True, undeadlined=True):
             if homework.uid == uid:
                 os.remove(homework.path)
+                self.list("")
                 exit_with_success(f"Homework '{uid}' deleted.")
 
         exit_with_error(f"No homework with UID '{uid}' found.")
@@ -216,6 +217,28 @@ class Homeworks:
                         homework.path,
                     ]
                 )
-                return
+
+                self.list("")
+                exit_with_success(f"Homework '{uid}' marked as complete.")
+
+        exit_with_error(f"No homework with UID '{uid}' found.")
+
+    def incomplete(self, uid: str, **kwargs):
+        """Mark a homework with the specified UID as incomplete. Although using sed is
+        likely more prone to breakage, I don't want Pyyaml messing with my formatting,
+        so it's going to stay this way."""
+        for homework in self.get_homeworks(completed=True, undeadlined=True):
+            if homework.uid == uid:
+                call(
+                    [
+                        "sed",
+                        "-i",
+                        "s/^\s*completed\s*:\s*True\s*/completed: False/",
+                        homework.path,
+                    ]
+                )
+
+                self.list("")
+                exit_with_success(f"Homework '{uid}' marked as incomplete.")
 
         exit_with_error(f"No homework with UID '{uid}' found.")
