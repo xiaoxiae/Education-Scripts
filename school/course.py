@@ -231,7 +231,7 @@ class Courses:
         # courses that were parsed as if the argument before - was an abbreviation
         abbr_courses = [
             course
-            for course in self.get_sorted_courses()
+            for course in self.get_sorted_courses(include_unscheduled=True)
             if c_abbr == course.abbreviation.lower()
             and c_type in (None, course.type[0])
         ]
