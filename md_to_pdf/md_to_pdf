@@ -41,7 +41,7 @@ def xopp_to_svg(i: str, o: str):
 
 def svg_to_pdf(i: str, o: str):
     """Convert a .svg file to a .pdf file using InkScape."""
-    run_shell_command(["inkscape", "-C", "-z", f"--file={i}", f"--export-pdf={o}"])
+    run_shell_command(["inkscape", "-C", f"--export-filename={o}", i], ignore_errors=True)
 
 
 def md_to_pdf(i: str, o: str, parameters: List[str]):
