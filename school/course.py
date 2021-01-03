@@ -165,7 +165,7 @@ class Courses:
             filenames = [f for f in filenames if not f[0] == "."]
             dirs[:] = [d for d in dirs if not d[0] == "."]
 
-            for filename in filter(lambda f: f.endswith(".yaml"), filenames):
+            for filename in filter(lambda f: f == "info.yaml", filenames):
                 courses.append(Course.from_file(os.path.join(root, filename)))
 
         return courses
