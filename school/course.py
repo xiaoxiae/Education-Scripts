@@ -787,13 +787,13 @@ class Courses:
         for course in courses:
             urls = course.resources
             handler = download_file
-            prefix = f"[{course.abbreviation}-{course.type[0]}: {kind}]"
+            prefix = f"[{course.abbreviation}-{course.type[0]}]"
 
             # skip courses without resources/videos
             if urls is None:
                 continue
 
-            folder = os.path.join(course.path(), kind)
+            folder = os.path.join(course.path(), "resources")
 
             for name, url in urls:
                 if check_type(name, List[str]):
