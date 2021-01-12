@@ -342,7 +342,7 @@ class Courses:
     def finals(self, short=False, **kwargs):
         """Lists dates of all finals."""
         # get courses that have finals records in them
-        finals_courses = [c for c in self.get_sorted_courses() if c.finals is not None]
+        finals_courses = [c for c in self.get_sorted_courses(include_unscheduled=True) if c.finals is not None]
 
         if len(finals_courses) == 0:
             print("No finals added yet!")
