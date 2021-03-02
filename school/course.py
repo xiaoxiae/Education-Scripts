@@ -1,5 +1,5 @@
+"""A module for defining and handling courses themselves."""
 import csv
-import os
 from datetime import date, datetime, timedelta
 from re import match, split
 from subprocess import call, Popen, DEVNULL

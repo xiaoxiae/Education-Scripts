@@ -8,7 +8,6 @@ import time
 import urllib.request
 from dataclasses import *
 from typing import *
-from subprocess import Popen, PIPE
 
 import httplib2
 import typesentry

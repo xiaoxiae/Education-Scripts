@@ -1,5 +1,4 @@
 """A module for handling homework."""
-import os
 from datetime import date, datetime
 from random import choice
 from string import ascii_lowercase
