@@ -72,8 +72,8 @@ class Course(Strict):
             False
             if self.time is None
             else (
-                today.weekday() == self.weekday()
-                and self.time.start <= today.hour * 60 + today.minute <= self.time.end
+                    today.weekday() == self.weekday()
+                    and self.time.start <= today.hour * 60 + today.minute <= self.time.end
             )
         )
 
@@ -85,8 +85,8 @@ class Course(Strict):
         """Returns the path of the course (possibly ignoring the type)."""
         return os.path.join(
             *(
-                [self.folder, f"{self.name} ({self.abbreviation})"]
-                + ([] if ignore_type else [self.type])
+                    [self.folder, f"{self.name} ({self.abbreviation})"]
+                    + ([] if ignore_type else [self.type])
             )
         )
 
@@ -111,10 +111,10 @@ class Course(Strict):
         root = path
         for _ in range(3):
             root = os.path.dirname(root)
-        shortened_path = path[len(root) + 1 :]
+        shortened_path = path[len(root) + 1:]
 
         name = shortened_path[: shortened_path.index(os.sep)]
-        abbreviation = name[name.rfind(" ") :][1:]
+        abbreviation = name[name.rfind(" "):][1:]
 
         invalid_abbreviation_error = (
             f"The course abbreviation '{abbreviation}' in '{name}' is not valid."
@@ -130,7 +130,7 @@ class Course(Strict):
         if len(abbreviation.strip()) == 0:
             exit_with_error(invalid_abbreviation_error)
 
-        shortened_path = shortened_path[len(name) + 1 :]
+        shortened_path = shortened_path[len(name) + 1:]
         course_type = shortened_path[: shortened_path.index(os.sep)]
 
         if course_type not in course_types:
@@ -211,8 +211,8 @@ class Courses:
             # find the course starting the soonest from now
             for course in self.get_sorted_courses(include_unscheduled=False):
                 time_to_course = (
-                    (course.time.start + course.weekday() * MID) - current_week_time
-                ) % MIW
+                                         (course.time.start + course.weekday() * MID) - current_week_time
+                                 ) % MIW
 
                 if time_to_course < min_time:
                     min_time = time_to_course
@@ -233,7 +233,7 @@ class Courses:
             course
             for course in self.get_sorted_courses(include_unscheduled=True)
             if c_abbr == course.abbreviation.lower()
-            and c_type in (None, course.type[0])
+               and c_type in (None, course.type[0])
         ]
 
         # courses that were parsed as if the argument before - was a name
@@ -241,7 +241,7 @@ class Courses:
             course
             for course in self.get_sorted_courses()
             if unidecode(course.name.lower()).startswith(unidecode(c_abbr.lower()))
-            and c_type in {None, course.type[0]}
+               and c_type in {None, course.type[0]}
         ]
 
         # return the courses for argument as an abbreviation or for argument as a name
@@ -292,8 +292,8 @@ class Courses:
 
                     # calculate the next occurrence
                     date = (
-                        current_day
-                        + timedelta(days=(course.weekday() - current_weekday) % 7)
+                            current_day
+                            + timedelta(days=(course.weekday() - current_weekday) % 7)
                     ).strftime("%-d. %-m.")
 
                     table.append([f"{weekday if not short else weekday[:3]} / {date}"])
@@ -390,7 +390,7 @@ class Courses:
             course = (
                 None
                 if i + 1 >= len(courses)
-                or courses[i].time.day != courses[i + 1].time.day
+                   or courses[i].time.day != courses[i + 1].time.day
                 else courses[i + 1]
             )
 
@@ -492,10 +492,38 @@ class Courses:
         total_minutes = ((end_minutes - beginning_minutes) // interval + 1) * interval
         number_of_intervals = total_minutes // interval
 
-        # separate courses based on weekdays
-        days = [[] for _ in range(7)]
+        segments = total_minutes // 10
+        days = {i: [[' '] * segments + ['│']] for i in range(5)}
+
         for course in self.get_sorted_courses(include_unscheduled=False):
-            days[course.weekday()].append(course)
+            i = (rtm(course.time.start) - beginning_minutes) // 10
+            width = (rtm(course.time.end) - rtm(course.time.start)) // 10
+
+            day = 0
+            for j in range(i, i + width):
+                if days[course.weekday()][day][j] != ' ':
+                    day += 1
+                    if len(days[course.weekday()]) == day:
+                        days[course.weekday()].append([' '] * segments + ['│'])
+
+            days[course.weekday()][day][i] = '{'
+            days[course.weekday()][day][i + width - 1] = '}'
+
+            space = width - 2  # width minus { and }
+
+            name = Ansi.color(
+                course.abbreviation
+                if len(course.abbreviation) <= space
+                else course.abbreviation[: space - 1] + ".",
+                course_types[course.type].color,
+            )
+
+            # TODO: this doesn't center correctly, for some reason
+            name = Ansi.center(name, space)
+
+            days[course.weekday()][day][i + 1] = name
+            for j in range(i + 2, i + width - 1):
+                days[course.weekday()][day][j] = ''
 
         # print the header
         print(
@@ -503,8 +531,8 @@ class Courses:
             + "".join(
                 Ansi.bold(
                     minutes_to_HHMM(beginning_minutes + interval * i)
-                    .strip()
-                    .ljust(10, " ")
+                        .strip()
+                        .ljust(10, " ")
                 )
                 for i in range(number_of_intervals)
             )
@@ -516,50 +544,16 @@ class Courses:
             )
         )
 
-        # a buffer for adding course line strings
-        print_buffer = ["" for _ in range(len(days))]
-        for i, day in enumerate(days):
-            print_buffer[i] += f"│ {WD_EN[i][:2].capitalize()} │"
+        for i in range(5):
+            x = f"│ {WD_EN[i][:2].capitalize()} │"
 
-            for j, course in enumerate(day):
-                prev_course = days[i][j - 1]
-
-                # duration before course start
+            for j, day in enumerate(days[i]):
                 if j == 0:
-                    wait = (rtm(course.time.start) - beginning_minutes) // 10
+                    print(x, end="")
                 else:
-                    wait = (rtm(course.time.start) - rtm(prev_course.time.end)) // 10
+                    print("│    │", end="")
 
-                # the space between { and }
-                space = (rtm(course.time.end) - rtm(course.time.start)) // 10 - 2
-
-                name = Ansi.color(
-                    course.abbreviation
-                    if len(course.abbreviation) <= (space)
-                    else course.abbreviation[: space - 1] + ".",
-                    course_types[course.type].color,
-                )
-
-                # python's .center aligns right and it looks ugly
-                if Ansi.len(name) % 2 == 0 and Ansi.len(name) != space:
-                    name += " "
-
-                print_buffer[i] += " " * wait + "{" + Ansi.center(name, space) + "}"
-
-                # last course padding after
-                if j == len(day) - 1:
-                    course_padding = (
-                        beginning_minutes + total_minutes - rtm(course.time.end)
-                    ) // 10
-                    break
-            else:
-                course_padding = total_minutes // 10
-
-            print_buffer[i] += " " * course_padding + "│"
-
-        # print the buffer
-        for line in print_buffer:
-            print(line)
+                print("".join(day))
 
         # print the very last line
         print(
@@ -639,10 +633,10 @@ class Courses:
             # if multiple courses were found and they're all the same (but different
             # type), open the general course folder
             if kind == "folder" and all(
-                [
-                    courses[i].abbreviation == courses[i + 1].abbreviation
-                    for i in range(len(courses) - 1)
-                ]
+                    [
+                        courses[i].abbreviation == courses[i + 1].abbreviation
+                        for i in range(len(courses) - 1)
+                    ]
             ):
                 open_file_browser(courses[0].path(ignore_type=True))
             else:
