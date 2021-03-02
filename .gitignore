@@ -9,3 +9,7 @@ __pycache__/
 # ignore the current semester (and the previous ones), since it will frequently change
 school/courses
 school/[0-9]*
+
+**/.idea
+
+ignored
