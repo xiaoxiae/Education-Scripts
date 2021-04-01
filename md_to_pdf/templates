@@ -1,3 +1,3 @@
-d, default: -p --highlight-style pygments -V geometry:margin=2.5cm
-h, homework: -p --highlight-style pygments -V geometry:margin=1.7cm -V papersize:a5
+d, default: -p --highlight-style pygments -V geometry:margin=2.5cm --pdf-engine=lualatex
+h, homework: -p --highlight-style pygments -V geometry:margin=1.7cm -V papersize:a5  --pdf-engine=lualatex
 
