@@ -35,7 +35,7 @@ parser.add_argument(
         "├── courses <when>\n"
         "├── finals\n"
         "└── timeline\n"
-        "resources <course name/abbreviation>\n"
+        "resources <course name/abbreviation/'all'>\n"
         "cron\n"
         "open\n"
         "├── course  <course name/abbreviation>\n"

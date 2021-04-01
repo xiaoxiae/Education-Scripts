@@ -60,9 +60,10 @@ class Course(Strict):
     finals: Finals = None
 
     # links to resources that are to be periodically updated with 'course update'
-    # either ["filename", "url"] or
-    # either [["thing to match in hrefs of all urls 1", "thing...", ...], "url"]
-    resources: List[List[Union[str, List[str]]]] = None
+    # - static:website-url: while True iterates over i and downloads url.format(i), until it fails
+    #                       if no substitution happens, downloads only once
+    # - moodle:TODO!
+    resources: Union[str, List[str]] = None
 
     def is_ongoing(self) -> bool:
         """Returns True if the course is ongoing and False if not."""
@@ -252,8 +253,12 @@ class Courses:
         courses = self.get_sorted_courses()
 
         if option == "plain":
-            for course in sorted(courses, key=lambda x: x.abbreviation + x.type):
-                print(f"{course.abbreviation}-{course.type[0]}")
+            if short:
+                for course in sorted(courses, key=lambda x: x.name + x.type):
+                    print(f"{course.name} ({course.type})")
+            else:
+                for course in sorted(courses, key=lambda x: x.abbreviation + x.type):
+                    print(f"{course.abbreviation}-{course.type[0]}")
             quit()
 
         current_day = datetime.today()
@@ -756,55 +761,59 @@ class Courses:
         """Update the resources of a given course."""
         courses = (
             self.get_course_from_argument(option)
-            if option != ""
+            if option == "all"
             else self.get_sorted_courses(include_unscheduled=True)
         )
 
-        def try_download(handler, url, folder, name, prefix):
-            """Attempt to download the resource. Throw an exception if unsuccessful."""
-            print(
-                f"{prefix} saving '{name}' from '{url}'... ", end="", flush=True,
-            )
+        if len(courses) == 0:
+            exit_with_error("No course matching the criteria.")
+
+        def download_with_handler(handler, url, folder, prefix):
+            print(f"{prefix} downloading from '{url}'... ", end="", flush=True)
 
             try:
                 if not os.path.exists(folder):
                     os.mkdir(folder)
 
-                handler(url, os.path.join(folder, name))
-                print("success!")
+                name = handler(url, folder)
+                print(f"success (saved as {name})!")
+                return True
             except Exception as e:
                 print(f"failed with '{e}'.")
+                return False
 
-        if len(courses) == 0:
-            exit_with_error("No course matching the criteria.")
+        def download(url, folder, prefix):
+            """Attempt to download the resource. Throw an exception if unsuccessful."""
+            if url.startswith("static:"):
+                url = url.lstrip("static:")
+
+                changes = url != url.format(*([0] * 100))  # this is ugly
+
+                if not changes:
+                    download_with_handler(download_url, url, folder, prefix)
+                else:
+                    i = 1
+                    while True:
+                        success = download_with_handler(download_url, url.format(i), folder, prefix)
+
+                        if not success:
+                            break
+
+                        i += 1
 
         for course in courses:
             urls = course.resources
-            handler = download_file
-            prefix = f"[{course.abbreviation}-{course.type[0]}]"
 
             # skip courses without resources/videos
             if urls is None:
                 continue
 
             folder = os.path.join(course.path(), "resources")
+            prefix = f"[{course.abbreviation}-{course.type[0]}]"
 
-            for name, url in urls:
-                if check_type(name, List[str]):
-                    for u in get_website_links(url):
-                        for n in name:
-                            if match(n, u):
-                                if not u.startswith("http"):
-                                    if not url.endswith("/"):
-                                        url = url[: -len(url.split("/")[-1])]
-                                    elif u.startswith("/"):
-                                        # TODO
-                                        pass
-
-                                    u = url + u
-
-                                proper_name = u.split("/")[-1]
-
-                                try_download(handler, u, folder, proper_name, prefix)
-                else:
-                    try_download(handler, url, folder, name, prefix)
+            # download
+            if type(urls) is str:
+                download(urls, folder, prefix)
+            else:
+                for url in urls:
+                    download(url, folder, prefix)
