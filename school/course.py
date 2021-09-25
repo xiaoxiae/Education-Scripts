@@ -158,7 +158,7 @@ class Courses:
         """Get all of the courses in no particular order."""
         courses: List[Course] = []
 
-        for root, dirs, filenames in os.walk(self.folder):
+        for root, dirs, filenames in os.walk(self.folder, followlinks=True):
             # https://stackoverflow.com/questions/13454164/os-walk-without-hidden-folders
             # ---
             # CAREFUL: dirs[:] is necessary, since it overwrites the contents, not just
