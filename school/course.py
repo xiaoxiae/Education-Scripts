@@ -793,11 +793,17 @@ class Courses:
                     download_with_handler(download_url, url, folder, prefix)
                 else:
                     i = 1
+                    failed_in_a_row = 0
                     while True:
                         success = download_with_handler(download_url, url.format(i), folder, prefix)
 
                         if not success:
-                            break
+                            failed_in_a_row +=1
+
+                            if failed_in_a_row > 3:
+                                break
+                        else:
+                            failed_in_a_row = 0
 
                         i += 1
 
