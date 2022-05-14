@@ -25,7 +25,7 @@ course_types = {
 
 # default handlers for opening course folders/websites/notes...
 file_browser = ["ranger"]
-web_browser = ["qutebrowser", "--target", "window"]
+web_browser = ["firefox", "--target", "window"]
 text_editor = ["vim"]
 note_handlers = {".xopp": "xournalpp", ".md": "vim"}
 
