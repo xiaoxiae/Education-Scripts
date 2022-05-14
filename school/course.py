@@ -266,7 +266,7 @@ class Courses:
         current_weekday = current_day.weekday()
 
         # split to scheduled and non-scheduled
-        unscheduled = [c for c in courses if c.time is None]
+        unscheduled = [c for c in self.get_courses() if c.time is None]
         courses = [c for c in courses if c not in unscheduled]
 
         table = []
@@ -334,11 +334,13 @@ class Courses:
                 table.append(
                     [
                         course.name if not short else course.abbreviation,
-                        course.type[0],
                         "-",
                         "-",
                     ]
                 )
+
+                # color the course name the appropriate color, depending on its type
+                table[-1][0] = Ansi.color(table[-1][0], course_types[course.type].color)
 
         if len(table) == 0:
             exit_with_error("No courses matching the criteria found!")
