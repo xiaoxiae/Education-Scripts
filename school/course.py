@@ -109,6 +109,7 @@ class Course(Strict):
         """Initialize a Course object from the path to its .yaml dictionary."""
         # descend 2 levels down, getting the name of the course directory
         # not pretty, but functional
+
         root = path
         for _ in range(3):
             root = os.path.dirname(root)

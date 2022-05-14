@@ -71,7 +71,7 @@ class Strict:
         throw."""
         try:
             with open(path, "r") as f:
-                return cls.from_dictionary(safe_load(f))
+                return cls.from_dictionary(safe_load(f) or {})
         except (YAMLError, TypeError) as e:
             exit_with_error(str(e), path)
         except KeyError as e:
