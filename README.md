@@ -206,7 +206,7 @@ The `info.yaml` file contains all of the necessary information about the course,
 ```
 code: 14j1o53
 
-teacher:  # optional
+teacher:
     name: John Smith  # mandatory
     email: smith@email.com
     website: john.com
@@ -218,21 +218,23 @@ classroom:  # optional
     number: S11
     floor: 3
 
-time:  # optional
+time:
     day: Wednesday  # mandatory
     start: 14:00
     end: 15:30
     weeks: odd
 
-finals:  # optional
+finals:
     date: 2020-06-18T13:00:00Z  # mandatory
-    classroom: ... # mandatory, same syntax as classroom above
+    classroom: ...              # mandatory
 
 website: https://www.google.com
 online: https://zoom.us/j/96931706150
 
 resources: ["static:http://website.com/{0:02}.pdf"]
 ```
+
+Note that all of the root attributes values are optional, so even an empty `.yaml` file is a valid course identifier.
 
 ### Flags
 The script supports various flags:
