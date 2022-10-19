@@ -23,6 +23,7 @@ school
 ├── open
 │   ├── course  <course name/abbreviation>
 │   ├── website <course name/abbreviation>
+│   ├── lsf     <course name/abbreviation>
 │   └── notes   <course name/abbreviation>
 ├── initialize
 └── homework
@@ -136,6 +137,9 @@ Open the course with the specified name/abbreviation in the file browser specifi
 
 ##### `open website <course>`
 Open the website of the course in the file browser specified in the configuration. If multiple websites are found, an option is presented to open one.
+
+##### `open lsf <course>`
+Open the LSF site of the course in the file browser specified in the configuration.
 
 ##### `open notes <course>`
 Open the `notes.<note app extensions>` file in the given course's directory in the note app specified in the configuration. If multiple files are found, an option is presented to open one.

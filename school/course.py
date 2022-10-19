@@ -56,6 +56,7 @@ class Course(Strict):
     classroom: Classroom = None
 
     website: Union[str, List[str]] = None
+    lsf: str = None  # link to Heidelberg system
     online: str = None
     finals: Finals = None
 
@@ -601,7 +602,15 @@ class Courses:
         elif len(courses) == 1:
             course = courses[0]
 
-            if kind == "website":
+            if kind == "lsf":
+                if course.lsf is None:
+                    exit_with_error("The course has no lsf link.")
+                else:
+                    website = course.lsf
+
+                open_web_browser(website)
+
+            elif kind == "website":
                 if course.website is None:
                     exit_with_error("The course has no website.")
                 elif isinstance(course.website, list):

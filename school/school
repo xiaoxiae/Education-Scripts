@@ -40,6 +40,7 @@ parser.add_argument(
         "open\n"
         "├── course  <course name/abbreviation>\n"
         "├── website <course name/abbreviation>\n"
+        "├── lsf     <course name/abbreviation>\n"
         "└── notes   <course name/abbreviation>\n"
         "initialize\n"
         "homework\n"
@@ -74,6 +75,7 @@ action_tree = {
     ("open",): {
         ("course",): partial(courses.open, "folder"),
         ("website",): partial(courses.open, "website"),
+        ("lsf",): partial(courses.open, "lsf"),
         ("notes",): partial(courses.open, "notes"),
         ("online",): partial(courses.open, "online"),
     },
