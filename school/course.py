@@ -60,10 +60,8 @@ class Course(Strict):
     online: str = None
     finals: Finals = None
 
-    # links to resources that are to be periodically updated with 'course update'
-    # - static:website-url: while True iterates over i and downloads url.format(i), until it fails
-    #                       if no substitution happens, downloads only once
-    # - moodle:TODO!
+    # links to resources that were periodically updated with 'course update'
+    # left for legacy reasons
     resources: Union[str, List[str]] = None
 
     def is_ongoing(self) -> bool:
@@ -667,70 +665,3 @@ class Courses:
                 course_count += 1
 
         exit_with_success(f"New semester with {course_count} courses initialized.")
-
-    def resources(self, option: str = "", **kwargs):
-        """Update the resources of a given course."""
-        courses = (
-            self.get_course_from_argument(option)
-            if option == "all"
-            else self.get_sorted_courses(include_unscheduled=True)
-        )
-
-        if len(courses) == 0:
-            exit_with_error("No course matching the criteria.")
-
-        def download_with_handler(handler, url, folder, prefix):
-            print(f"{prefix} downloading from '{url}'... ", end="", flush=True)
-
-            try:
-                if not os.path.exists(folder):
-                    os.mkdir(folder)
-
-                name = handler(url, folder)
-                print(f"success (saved as {name})!")
-                return True
-            except Exception as e:
-                print(f"failed with '{e}'.")
-                return False
-
-        def download(url, folder, prefix):
-            """Attempt to download the resource. Throw an exception if unsuccessful."""
-            if url.startswith("static:"):
-                url = url.lstrip("static:")
-
-                changes = url != url.format(*([0] * 100))  # this is ugly
-
-                if not changes:
-                    download_with_handler(download_url, url, folder, prefix)
-                else:
-                    i = 1
-                    failed_in_a_row = 0
-                    while True:
-                        success = download_with_handler(download_url, url.format(i), folder, prefix)
-
-                        if not success:
-                            failed_in_a_row +=1
-
-                            if failed_in_a_row > 3:
-                                break
-                        else:
-                            failed_in_a_row = 0
-
-                        i += 1
-
-        for course in courses:
-            urls = course.resources
-
-            # skip courses without resources/videos
-            if urls is None:
-                continue
-
-            folder = os.path.join(course.path(), "resources")
-            prefix = f"[{course.abbreviation}-{course.type[0]}]"
-
-            # download
-            if type(urls) is str:
-                download(urls, folder, prefix)
-            else:
-                for url in urls:
-                    download(url, folder, prefix)

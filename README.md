@@ -24,7 +24,6 @@ school
 │   ├── courses <when>
 │   ├── finals
 │   └── timeline
-├── resources <course name/abbreviation/'all'>
 ├── open
 │   ├── course  <course name/abbreviation>
 │   ├── website <course name/abbreviation>
@@ -126,14 +125,6 @@ Lists the courses as a timeline.
 │                    { LINUX }                                                             │
 ╰──────────────────────────────────────────────────────────────────────────────────────────╯
 ```
-
-#### `resources <course name/abbreviation/'all'>`
-Downloads/updates resources of the course.
-Resources are links to (usually PDF) files on the web that are periodically updated (or that aren't but we want to download them anyway).
-
-The url must start with `static:`, in which case it will be statically downloaded to the resources folder of the given course. If it contains a format string `{0:02}`, then files with this format (starting from 1, ending when it first fails) will all be downloaded.
-
-_Support for Moodle is on the way._
 
 #### `open <action> <course>`
 Opens something course-related.

@@ -49,7 +49,6 @@ action_tree = {
         ("finals",): courses.finals,
         ("timeline",): courses.timeline,
     },
-    ("resources",): courses.resources,
     ("open",): {
         ("course",): partial(courses.open, "folder"),
         ("website",): partial(courses.open, "website"),
