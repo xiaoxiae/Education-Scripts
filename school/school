@@ -50,7 +50,6 @@ action_tree = {
         ("timeline",): courses.timeline,
     },
     ("resources",): courses.resources,
-    ("cron",): courses.compile_cron_jobs,
     ("open",): {
         ("course",): partial(courses.open, "folder"),
         ("website",): partial(courses.open, "website"),
