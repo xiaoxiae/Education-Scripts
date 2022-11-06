@@ -1,10 +1,7 @@
 # Education Scripts
 
-## school
+## `school`
 The main script of the repository. Performs many school-related tasks, like opening the course folder/website, printing the calendar, listing finals, etc.
-
-**NOTE:** the sample outputs presented don't contain color, although the script supports it.
-Sorry for that, but I'm not embedding images.
 
 ### Starting out
 If you're a student of a school that uses SIS, use `school initialize <schedule CSV>` to create this structure automatically (taken from `SIS -> Rozvrh NG -> Zobrazit všechny předměty -> CSV`) in your current working directory.
@@ -140,20 +137,28 @@ Open the website of the course in the file browser specified in the configuratio
 ##### `open lsf <course>`
 Open the LSF site of the course in the file browser specified in the configuration.
 
+_Added because I'm currently getting a Master's degree in Computer Science from the University of Heidelberg and this is the central system they're using._
+
 ##### `open notes <course>`
-Open the `notes.<note app extensions>` file in the given course's directory in the note app specified in the configuration. If multiple files are found, an option is presented to open one.
+Open the `notes.<note app extensions>` file in the given course's directory in the note app specified in the configuration.
+If multiple files are found, an option is presented to open one.
 
 ##### `open online <course>`
-Open the course's online link in the file browser specified in the configuration. Meant to be a Zoom (or Zoom-like service) link, which will likely differ from the course's website.
+Open the course's online link in the file browser specified in the configuration.
+Meant to be a Zoom (or Zoom-like service) link, which will likely differ from the course's website.
 
 #### `initialize <schedule CSV>`
-Initializes a new school year in the current directory from a CSV in the format from my university's information system (SIS). For fellow students of MFF UK: `SIS -> Rozvrh NG -> Zobrazit všechny předměty -> CSV`.
+Initializes a new school year in the current directory from a CSV in the format from my university's information system (SIS).
+For fellow students of MFF UK: `SIS -> Rozvrh NG -> Zobrazit všechny předměty -> CSV`.
 
 #### `homework`
 Handles homework-related actions.
 
 ##### `list <course name/abbreviation/'all'>`
-Lists all unfinished homework. `course` is in the same form as the `open` command above. If `all` is specified, all homework (regardless of completeness) is listed.
+Lists all unfinished homework.
+`course` is in the same form as the `open` command above.
+If `all` is specified, all homework (regardless of completeness) is listed.
+
 ```
 ╭───────────────────────────────────────────────◀ Homework ▶───────────────────────────────────────────────╮
 │ iqf │ Matematická analýza 1             │ Equations     │ 27. 8. 2020 │ 12:00 │ overdue (1 day, 5 hours) │
@@ -179,80 +184,85 @@ Mark a homework with the given UID as compete.
 ##### `extrapolate <course>`
 Attempt to create a new homework for a given course by looking at the name and date of the previous two.
 
-### Dependencies
-- [Xournal++](https://github.com/xournalpp/xournalpp)
-- [Ranger](https://wiki.archlinux.org/index.php/Ranger)
-- [Firefox](https://www.mozilla.org/firefox/)
-- [unidecode](https://pypi.org/project/Unidecode/) and [pyyaml](https://pyyaml.org/wiki/PyYAMLDocumentation) (also specified in `requirements.txt`)
+### Application dependencies
+The script calls various external programs for opening notes/websites/folders:
+
+- File explorer: [Ranger](https://wiki.archlinux.org/index.php/Ranger)
+- Note taker: [Xournal++](https://github.com/xournalpp/xournalpp)
+- Text editor: [Vim](https://www.vim.org/)
+- Web browser: [Firefox](https://www.mozilla.org/firefox/)
+
+If you prefer to use other programs, edit `config.py`.
 
 ### Folder structure
-The script requires a particular folder structure to function properly. By default, a `courses` folder (or a symlink) should be placed in the `school` folder of this repository, with the following contents:
+The script requires a particular folder structure to function properly.
+By default, a `courses` folder (or a symlink) should be placed in the `school` folder of this repository, with the following contents:
+
 ```
 courses
 ├── Course 1 (abbreviation)
-│   ├── cvičení
-│   │   ├── info.yaml
-│   │   └── course 1 lab files...
-│   └── přednáška
-│       ├── info.yaml
-│       └── course 1 lecture files...
+│   ├── tutorial
+│   │   └── info.yaml
+│   └── lecture
+│   │   └── info.yaml
 ├── Course 2 (abbreviation)
-│   ├── cvičení
-│   │   ├── info.yaml
-│   │   └── course 2 lab files...
-│   └── přednáška
-│       ├── info.yaml
-│       └── course 2 lecture files...
+│   ├── tutorial
+│   │   └── info.yaml
+│   └── lecture
+│   │   └── info.yaml
 └── courses...
 ```
 
-The courses should all be in one folder, their folder names being the course name, followed by the course abbreviation (`Algorithms I (ALG)`, for example). In each of the course folders, at least one of the folders specified in `school/config.py > course_types` should be present - these are defined by the user and separate the given course lab/lecture/... files. In the example, "cvičení" and "přednáška" is used, since I'm Czech (they translate to "lab" and "lecture"), but feel free to use whatever you wish.
+The courses should all be in one folder, their folder names being the course name, followed by the course abbreviation (`Algorithms I (ALG)`, for example).
+In each of the course folders, at least one of the folder names specified in `school/config.py > course_types` should be present - these are defined by the user and separate the given course tutorial/lecture files.
 
-The `info.yaml` file contains all of the necessary information about the course, such as time, place, email, etc... Here is the full syntax with sample values:
+The `info.yaml` file contains all of the necessary information about the course, such as time, place, email, etc...
+Here is the full syntax with sample values:
+
 ```
 code: 14j1o53
 
 teacher:
-    name: John Smith  # mandatory
+    name: John Smith
     email: smith@email.com
     website: john.com
     office: T312
     note: "Consultations from 13:00 to 15:00 on Wednesday."
 
-classroom:  # optional
-    address: 89 Old Atlantic St. Christiansburg, VA 24073
-    number: S11
-    floor: 3
-
 time:
-    day: Wednesday  # mandatory
+    day: Wednesday
     start: 14:00
     end: 15:30
     weeks: odd
 
+classroom:
+    address: 89 Old Atlantic St. Christiansburg, VA 24073
+    number: S11
+    floor: 3
+
 finals:
-    date: 2020-06-18T13:00:00Z  # mandatory
-    classroom: ...              # mandatory
+    date: 2020-06-18T13:00:00Z
+    classroom: ...
 
 website: https://www.google.com
 online: https://zoom.us/j/96931706150
-
-resources: ["static:http://website.com/{0:02}.pdf"]
 ```
 
-Note that all of the root attributes values are optional, so even an empty `.yaml` file is a valid course identifier.
+All of the root attributes values are optional, so even an empty `.yaml` file is a valid course identifier.
 
 ### Flags
-The script supports various flags:
-- `-s`, `--short` - makes the output of the script more concise
-- `-f`, `--folder` - specify, where the courses folder is
-	- overrides `config.py`
-	- useful when you want to operate on previous semesters but don't want to rewrite configuration
+The script supports various flags (sometimes):
 
-## md_to_pdf
-Converts markdown files with embedded Xournal++ files to PDF (using Pandoc). Helpful when doing homework where sketches are required.
+- `-s`, `--short` - makes the output of the script more concise
+- `-f`, `--folder` - specify, where the current courses folder is (overrides `config.py`)
+	- useful when you want to operate on the previous semesters but don't want to rewrite configuration
+
+## `md_to_pdf`
+Converts markdown files with embedded Xournal++ files to PDF (using Pandoc).
+Helpful when doing homework where sketches are required.
 
 ### Dependencies
+
 - [Inkscape](https://inkscape.org/)
 - [Pandoc](https://pandoc.org/)
 - [Xournal++](https://github.com/xournalpp/xournalpp)

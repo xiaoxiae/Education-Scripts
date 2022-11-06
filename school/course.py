@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 from re import match, split
 from subprocess import call, Popen, DEVNULL
 
+import shutil
 import yaml
 from unidecode import unidecode
 
@@ -476,18 +477,30 @@ class Courses:
 
         def open_file_browser(path: str):
             """Opens the specified path in a file browser."""
+            if not shutil.which(file_browser[0]):
+                exit_with_error(f"File browser '{file_browser[0]}' not installed, can't open.")
+
             call(file_browser + [path])
 
         def open_web_browser(url: str):
             """Opens the specified website in a web browser."""
+            if not shutil.which(web_browser[0]):
+                exit_with_error(f"Web browser '{web_browser[0]}' not installed, can't open.")
+
             Popen(web_browser + [url], stdout=DEVNULL, stderr=DEVNULL)
 
         def open_in_text_editor(path: str):
             """Opens the specified website in a web browser."""
+            if not shutil.which(text_editor[0]):
+                exit_with_error(f"Web browser '{text_editor[0]}' not installed, can't open.")
+
             call(text_editor + [path])
 
         def open_in_note_app(app: str, path: str):
             """Opens the specified file in its associated note app."""
+            if not shutil.which(app[0]):
+                exit_with_error(f"Note app '{app[0]}' not installed, can't open.")
+
             call([app, path])
 
         # if no argument is specified, default to getting the current or the next course

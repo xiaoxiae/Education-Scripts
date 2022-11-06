@@ -11,9 +11,7 @@ from dataclasses import *
 from pprint import pprint
 from typing import *
 
-import httplib2
 import typesentry
-from bs4 import BeautifulSoup, SoupStrainer
 from yaml import YAMLError, safe_load
 
 from config import *
