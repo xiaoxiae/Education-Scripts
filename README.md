@@ -3,15 +3,21 @@
 ## school
 The main script of the repository. Performs many school-related tasks, like opening the course folder/website, printing the calendar, listing finals, etc.
 
-**NOTE:** the sample outputs presented don't contain color, although the script supports it. Sorry for that, but I'm not embedding images.
+**NOTE:** the sample outputs presented don't contain color, although the script supports it.
+Sorry for that, but I'm not embedding images.
 
 ### Starting out
-If you're a student of a school that uses SIS, use `school initialize <schedule CSV>` to create this structure automatically (taken from `SIS -> Rozvrh NG -> Zobrazit všechny předměty -> CSV`) in your current working directory. If not, see "Folder Structure" section of this document to create the structure manually.
+If you're a student of a school that uses SIS, use `school initialize <schedule CSV>` to create this structure automatically (taken from `SIS -> Rozvrh NG -> Zobrazit všechny předměty -> CSV`) in your current working directory.
+If not, see "Folder Structure" section of this document to create the structure manually.
 
 ### Actions
-The script supports various actions. For example, by writing `school open course alg`, you open the course with name/abbreviation `alg`. However, since this would be quite a chore to write, you can simplify by only writing the starting letters of the actions that you want to perform (`school o c alg`, in our case).
+The script supports various actions.
+For example, by writing `school open course alg`, you open the course with name/abbreviation `alg`.
+However, since this would be quite a chore to write, you can simplify by only writing the starting letters of the actions that you want to perform (`school o c alg`, in our case).
 
-Here are the currently supported actions (the details of each are explained in the sections below). The 'or' between some of the names for the actions means that either name can be used to call it, since it's tedious to remember whether to 'remove' a homework or 'delete' it...
+Here are the currently supported actions (the details of each are explained in the sections below).
+The 'or' between some of the names for the actions means that either name can be used to call it, since it's tedious to remember whether to 'remove' a homework or to 'delete' it...
+
 ```
 school
 ├── list
@@ -32,11 +38,13 @@ school
     ├── edit                   <homework UID>
     ├── remove or delete       <homework UID>
     ├── complete or finish     <homework UID>
-    └── incomplete or unfinish <homework UID>\n"
+    ├── incomplete or unfinish <homework UID>
+    └── extrapolate            <course name/abbreviation>
 ```
 
 #### `list courses`
 Lists all of the courses. The `<when>` can be either empty (listing all courses), `t`/`tm` (today/tomorrow) or `mo`/`tu`/`we`/`th`/`fr`/`sa`/`su` for listing courses on a given weekday.
+
 ```
 ╭───────────────────────◀ Monday / 31. 8. ▶───────────────────────╮
 │ Doporučené postupy v programování │ 10:40 - 12:10        │ SU2  │
@@ -69,6 +77,7 @@ Lists all of the courses. The `<when>` can be either empty (listing all courses)
 ```
 
 If `<when>` is plain, only a simple list is produced:
+
 ```
 ADS++-c
 ADS-c
@@ -92,6 +101,7 @@ PS-p
 
 #### `list finals`
 Lists finals for all courses. To add a final, one must add the `final` attribute to `info.yaml`:
+
 ```
 ╭───────────────────────────◀ Finals! ▶───────────────────────────────────────╮
 │ Algoritmy a Datové Struktury │  4. 6. 2020 │  9:30 │ done            │ S3   │
@@ -105,6 +115,7 @@ Lists finals for all courses. To add a final, one must add the `final` attribute
 
 #### `list timeline`
 Lists the courses as a timeline.
+
 ```
 ╭──────────────────────────────────────────────────────────────────────────────────────────╮
 │7:20      9:00      10:40     12:20     14:00     15:40     17:20     19:00     20:40     │
@@ -118,7 +129,8 @@ Lists the courses as a timeline.
 ```
 
 #### `resources <course name/abbreviation/'all'>`
-Downloads/updates resources of the course. Resources are links to (usually PDF) files on the web that are periodically updated (or that aren't but we want to download them anyway).
+Downloads/updates resources of the course.
+Resources are links to (usually PDF) files on the web that are periodically updated (or that aren't but we want to download them anyway).
 
 The url must start with `static:`, in which case it will be statically downloaded to the resources folder of the given course. If it contains a format string `{0:02}`, then files with this format (starting from 1, ending when it first fails) will all be downloaded.
 
@@ -176,6 +188,9 @@ Delete a homework with the given UID.
 
 ##### `complete or finish <uid>`
 Mark a homework with the given UID as compete.
+
+##### `extrapolate <course>`
+Attempt to create a new homework for a given course by looking at the name and date of the previous two.
 
 ### Dependencies
 - [Xournal++](https://github.com/xournalpp/xournalpp)

@@ -30,27 +30,6 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "actions",
     nargs="+",
-    help=(
-        "list\n"
-        "├── courses <when>\n"
-        "├── finals\n"
-        "└── timeline\n"
-        "resources <course name/abbreviation/'all'>\n"
-        "cron\n"
-        "open\n"
-        "├── course  <course name/abbreviation>\n"
-        "├── website <course name/abbreviation>\n"
-        "├── lsf     <course name/abbreviation>\n"
-        "└── notes   <course name/abbreviation>\n"
-        "initialize\n"
-        "homework\n"
-        "├── list                   <course name/abbreviation/'all'>\n"
-        "├── add or new             <course name/abbreviation>\n"
-        "├── edit                   <homework UID>\n"
-        "├── remove or delete       <homework UID>\n"
-        "├── complete or finish     <homework UID>\n"
-        "└── incomplete or unfinish <homework UID>\n"
-    ),
 )
 
 parser.add_argument("-s", "--short", action="store_true", help="shorten the output")
@@ -87,6 +66,7 @@ action_tree = {
         ("remove", "delete"): homeworks.delete,
         ("complete", "finish"): homeworks.complete,
         ("incomplete", "unfinish"): homeworks.incomplete,
+        ("extrapolate",): homeworks.extrapolate,
     },
 }
 
@@ -122,8 +102,8 @@ while len(arguments.actions) != 0 and isinstance(action_tree, dict):
 
 # if the action tree isn't a function by now, exit; else extract the function
 if isinstance(action_tree, dict):
-    sys.exit(
-        "ERROR: Actions remaining:"
+    exit_with_error(
+        "Actions remaining:"
         f" {{{', '.join(' or '.join(d) for d in action_tree)}}}"
     )
 

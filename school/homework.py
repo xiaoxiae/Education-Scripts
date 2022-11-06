@@ -49,7 +49,7 @@ class Homeworks:
     def __init__(self, courses: Courses):
         self.courses = courses
 
-    def filter_by_homework(self, courses):
+    def _filter_by_homework(self, courses):
         """Filter out courses that can't have homework."""
         return [c for c in courses if course_types[c.type].has_homework]
 
@@ -59,10 +59,10 @@ class Homeworks:
         homeworks = []
 
         # either get all homework, or only homework for a particular class
-        courses = self.filter_by_homework(
+        courses = self._filter_by_homework(
             self.courses.get_sorted_courses(include_unscheduled=True)
             if option == ""
-            else self.filter_by_homework(self.courses.get_course_from_argument(option))
+            else self._filter_by_homework(self.courses.get_course_from_argument(option))
         )
 
         for course in courses:
@@ -84,6 +84,28 @@ class Homeworks:
             filter(lambda h: h.deadline is not None or undeadlined, homeworks),
             key=lambda h: h.deadline or datetime.max,
         )
+
+    def extrapolate(self, course: str = "", **kwargs):
+        """Take the last two homeworks from a given course and attempt to extrapolate
+        the next one."""
+        homeworks = self.get_homeworks(course, completed=True, undeadlined=False)
+
+        if len(homeworks) < 2:
+            exit_with_error("Not enough homeworks to extrapolate.")
+
+        h1, h2 = sorted(homeworks, key=lambda x: x.deadline)[-2:]
+
+        try:
+            id_h1 = int(h1.name.split()[-1])
+            id_h2 = int(h2.name.split()[-1])
+
+            id_new = id_h2 + (id_h2 - id_h1)
+            date_new = h2.deadline + (h2.deadline - h1.deadline)
+            name_new = h2.name.rsplit(maxsplit=1)[0]
+
+            self.add(course, name=f"{name_new} {id_new}", date=date_new)
+        except Exception as e:
+            exit_with_error("Couldn't extrapolate.")
 
     def list(self, option: str = "", short: bool = False, **kwargs):
         # build a table
@@ -149,9 +171,9 @@ class Homeworks:
 
         exit_with_error(f"No homework with UID '{uid}' found.")
 
-    def add(self, option: str, **kwargs):
+    def add(self, option: str, name=None, date=None, **kwargs):
         """Add a new homework."""
-        courses = self.filter_by_homework(self.courses.get_course_from_argument(option))
+        courses = self._filter_by_homework(self.courses.get_course_from_argument(option))
 
         if len(courses) == 0:
             exit_with_error("No course matching the criteria.")
@@ -183,9 +205,9 @@ class Homeworks:
             now = datetime.now()
             f.write(
                 f"uid: {uid}\n"
-                f"name: \n"
+                f"name: {name or ''}\n"
                 f"description: \n"
-                f"deadline: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"deadline: {date or datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
                 f"\n"
                 f"completed: False\n"
             )
