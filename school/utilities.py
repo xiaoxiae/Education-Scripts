@@ -218,6 +218,7 @@ def pick_one(l: list):
     for i, item in enumerate(l):
         print(f"{i + 1}) {item}")
 
+    index = None
     while True:
         try:
             val = input("Pick one (leave blank for 1): ")
@@ -227,11 +228,15 @@ def pick_one(l: list):
                 index = int(val) - 1
         except ValueError:
             continue
+        except EOFError:
+            break
 
         if not 0 <= index < len(l):
             continue
 
         return l[index]
+
+    sys.exit(0)
 
 
 def download_url(url, folder):
