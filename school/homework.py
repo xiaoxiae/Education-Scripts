@@ -1,5 +1,5 @@
 """A module for handling homework."""
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from random import choice
 from string import ascii_lowercase
 from subprocess import call
@@ -202,12 +202,22 @@ class Homeworks:
                 break
 
         with open(os.path.join(hw_dir, f"{uid}.yaml"), "w") as f:
-            now = datetime.now()
+            if course.time is not None:
+                # TODO: odd / even weeks are counted from semester start
+                next_time = datetime.now().replace(
+                    hour=course.time.start // 60,
+                    minute=course.time.start % 60,
+                    second=0
+                )
+                while next_time.weekday() != course.weekday():
+                    next_time += timedelta(days=1)
+            else:
+                next_time = datetime.now().replace(second=0)
             f.write(
                 f"uid: {uid}\n"
                 f"name: {name or ''}\n"
                 f"description: \n"
-                f"deadline: {date or datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"deadline: {date or next_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
                 f"\n"
                 f"completed: False\n"
             )
