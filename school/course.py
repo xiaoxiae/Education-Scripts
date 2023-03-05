@@ -571,8 +571,6 @@ class Courses:
 
     def initialize(self, cwd: str, option: str = "", **kwargs):
         """Initialize a new year from a CSV from SIS (found in Rozvrh NG -> CSV)."""
-        # TODO: make the times when the courses start prettier
-        path = os.path.join(cwd, option)
 
         def recursive_dictionary_clear(d):
             """Recursively clear dictionary keys with empty values."""
@@ -614,8 +612,16 @@ class Courses:
         if option == "":
             exit_with_error("No CSV to initialize from specified.")
 
+        path = os.path.join(cwd, option)
+
         if not os.path.exists(path):
-            exit_with_error("Specified file doesn't exist.")
+            exit_with_error("CSV file doesn't exist.")
+
+        if os.path.exists(courses_folder):
+            if len(os.listdir(courses_folder)) != 0:
+                exit_with_error("Courses folder non-empty, not initializing.")
+        else:
+            os.mkdir(courses_folder)
 
         with open(path, "rb") as f:
             # SIS uses cp1250 :(
@@ -661,16 +667,14 @@ class Courses:
                 )
 
                 # create the directory with the name of the course
-                course_dir = os.path.join(cwd, f"{name} ({abbreviation})")
-                if not os.path.exists(course_dir):
-                    os.mkdir(course_dir)
+                course_dir = os.path.join(courses_folder, f"{name} ({abbreviation})")
+                os.makedirs(course_dir, exist_ok=True)
 
                 # lecture / lab
                 # based on the ID of the SIS ticket - labs end with x** and lectures with p*
                 course_type = "přednáška" if uid[:-1].endswith("p") else "cvičení"
 
-                if not os.path.exists(os.path.join(course_dir, course_type)):
-                    os.mkdir(os.path.join(course_dir, course_type))
+                os.makedirs(os.path.join(course_dir, course_type), exist_ok=True)
 
                 with open(os.path.join(course_dir, course_type, "info.yaml"), "w") as f:
                     yaml.dump(out, stream=f, allow_unicode=True)

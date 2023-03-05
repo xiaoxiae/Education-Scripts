@@ -4,7 +4,7 @@
 The main script of the repository. Performs many school-related tasks, like opening the course folder/website, printing the calendar, listing finals, etc.
 
 ### Starting out
-If you're a student of a school that uses SIS, use `school initialize <schedule CSV>` to create this structure automatically (taken from `SIS -> Rozvrh NG -> Zobrazit všechny předměty -> CSV`) in your current working directory.
+If you're a student of a school that uses SIS, use `school initialize <schedule CSV>` to create this structure automatically (taken from `SIS -> Rozvrh NG -> Zobrazit všechny předměty -> CSV`).
 If not, see "Folder Structure" section of this document to create the structure manually.
 
 ### Actions
@@ -148,7 +148,7 @@ Open the course's online link in the file browser specified in the configuration
 Meant to be a Zoom (or Zoom-like service) link, which will likely differ from the course's website.
 
 #### `initialize <schedule CSV>`
-Initializes a new school year in the current directory from a CSV in the format from my university's information system (SIS).
+Initializes a new school year from a CSV in the format from my university's information system (SIS).
 For fellow students of MFF UK: `SIS -> Rozvrh NG -> Zobrazit všechny předměty -> CSV`.
 
 #### `homework`
@@ -196,7 +196,7 @@ If you prefer to use other programs, edit `config.py`.
 
 ### Folder structure
 The script requires a particular folder structure to function properly.
-By default, a `courses` folder (or a symlink) should be placed in the `school` folder of this repository, with the following contents:
+By default, a `courses` folder/symlink (as defined by the `courses_folder` variable in `config.py`) should be placed in the `school` folder of this repository with the following contents:
 
 ```
 courses
