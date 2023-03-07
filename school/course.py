@@ -167,7 +167,7 @@ class Courses:
             filenames = [f for f in filenames if not f[0] == "."]
             dirs[:] = [d for d in dirs if not d[0] == "."]
 
-            for filename in filter(lambda f: f == "info.yaml", filenames):
+            for filename in filter(lambda f: f == course_yaml, filenames):
                 courses.append(Course.from_file(os.path.join(root, filename)))
 
         return courses
@@ -582,7 +582,7 @@ class Courses:
                     del d[key]
 
         def format_teacher(teacher):
-            """An ungly, hard-coded way to format the names of the teachers. Couldn't
+            """An ugly, hard-coded way to format the names of the teachers. Couldn't
             find something more solid, so this will have to do for now."""
             l = split(
                 "|".join(
@@ -628,6 +628,8 @@ class Courses:
             contents = f.read().decode("cp1250")
 
             course_count = 0
+            course_name_set = set()
+
             for l in list(csv.reader(contents.splitlines(), delimiter=";"))[1:]:
                 uid, _, code, name, day, start, self, dur, _, _, _, weeks, teacher = l
 
@@ -666,6 +668,8 @@ class Courses:
                     ]
                 )
 
+                course_name_set.add(name)
+
                 # create the directory with the name of the course
                 course_dir = os.path.join(courses_folder, f"{name} ({abbreviation})")
                 os.makedirs(course_dir, exist_ok=True)
@@ -676,9 +680,9 @@ class Courses:
 
                 os.makedirs(os.path.join(course_dir, course_type), exist_ok=True)
 
-                with open(os.path.join(course_dir, course_type, "info.yaml"), "w") as f:
+                with open(os.path.join(course_dir, course_type, course_yaml), "w") as f:
                     yaml.dump(out, stream=f, allow_unicode=True)
 
                 course_count += 1
 
-        exit_with_success(f"New semester with {course_count} courses initialized.")
+        exit_with_success(f"New semester with {len(course_name_set)} courses ({course_count} lectures/tutorials) initialized.")

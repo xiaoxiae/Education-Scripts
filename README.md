@@ -21,12 +21,16 @@ school
 │   ├── courses <when>
 │   ├── finals
 │   └── timeline
+│
 ├── open
 │   ├── course  <course name/abbreviation>
 │   ├── website <course name/abbreviation>
 │   ├── lsf     <course name/abbreviation>
-│   └── notes   <course name/abbreviation>
-├── initialize
+│   ├── notes   <course name/abbreviation>
+│   └── online  <course name/abbreviation>
+│
+├── initialize <schedule CSV>
+│
 └── homework
     ├── list                   <course name/abbreviation/'all'>
     ├── add or new             <course name/abbreviation>
