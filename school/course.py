@@ -167,7 +167,7 @@ class Courses:
             filenames = [f for f in filenames if not f[0] == "."]
             dirs[:] = [d for d in dirs if not d[0] == "."]
 
-            for filename in filter(lambda f: f == "info.yaml", filenames):
+            for filename in filter(lambda f: f == course_yaml, filenames):
                 courses.append(Course.from_file(os.path.join(root, filename)))
 
         return courses
@@ -571,8 +571,6 @@ class Courses:
 
     def initialize(self, cwd: str, option: str = "", **kwargs):
         """Initialize a new year from a CSV from SIS (found in Rozvrh NG -> CSV)."""
-        # TODO: make the times when the courses start prettier
-        path = os.path.join(cwd, option)
 
         def recursive_dictionary_clear(d):
             """Recursively clear dictionary keys with empty values."""
@@ -584,7 +582,7 @@ class Courses:
                     del d[key]
 
         def format_teacher(teacher):
-            """An ungly, hard-coded way to format the names of the teachers. Couldn't
+            """An ugly, hard-coded way to format the names of the teachers. Couldn't
             find something more solid, so this will have to do for now."""
             l = split(
                 "|".join(
@@ -614,14 +612,24 @@ class Courses:
         if option == "":
             exit_with_error("No CSV to initialize from specified.")
 
+        path = os.path.join(cwd, option)
+
         if not os.path.exists(path):
-            exit_with_error("Specified file doesn't exist.")
+            exit_with_error("CSV file doesn't exist.")
+
+        if os.path.exists(courses_folder):
+            if len(os.listdir(courses_folder)) != 0:
+                exit_with_error("Courses folder non-empty, not initializing.")
+        else:
+            os.mkdir(courses_folder)
 
         with open(path, "rb") as f:
             # SIS uses cp1250 :(
             contents = f.read().decode("cp1250")
 
             course_count = 0
+            course_name_set = set()
+
             for l in list(csv.reader(contents.splitlines(), delimiter=";"))[1:]:
                 uid, _, code, name, day, start, self, dur, _, _, _, weeks, teacher = l
 
@@ -660,21 +668,21 @@ class Courses:
                     ]
                 )
 
+                course_name_set.add(name)
+
                 # create the directory with the name of the course
-                course_dir = os.path.join(cwd, f"{name} ({abbreviation})")
-                if not os.path.exists(course_dir):
-                    os.mkdir(course_dir)
+                course_dir = os.path.join(courses_folder, f"{name} ({abbreviation})")
+                os.makedirs(course_dir, exist_ok=True)
 
                 # lecture / lab
                 # based on the ID of the SIS ticket - labs end with x** and lectures with p*
                 course_type = "přednáška" if uid[:-1].endswith("p") else "cvičení"
 
-                if not os.path.exists(os.path.join(course_dir, course_type)):
-                    os.mkdir(os.path.join(course_dir, course_type))
+                os.makedirs(os.path.join(course_dir, course_type), exist_ok=True)
 
-                with open(os.path.join(course_dir, course_type, "info.yaml"), "w") as f:
+                with open(os.path.join(course_dir, course_type, course_yaml), "w") as f:
                     yaml.dump(out, stream=f, allow_unicode=True)
 
                 course_count += 1
 
-        exit_with_success(f"New semester with {course_count} courses initialized.")
+        exit_with_success(f"New semester with {len(course_name_set)} courses ({course_count} lectures/tutorials) initialized.")
