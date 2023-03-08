@@ -147,7 +147,12 @@ class Courses:
         courses: List[Course] = []
 
         for root, dirs, filenames in os.walk(self.folder, followlinks=True):
-            for filename in filter(lambda f: f == course_yaml, filenames):
+            # if course_yaml is a hidden file, also search for non-hidden variants
+            # (for backwards compatibility)
+            is_course_yaml = lambda f: f == course_yaml \
+                    or (course_yaml[0] == "." and f == course_yaml[1:])
+
+            for filename in filter(is_course_yaml, filenames):
                 courses.append(Course.from_file(os.path.join(root, filename)))
 
         return courses
