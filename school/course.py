@@ -147,13 +147,6 @@ class Courses:
         courses: List[Course] = []
 
         for root, dirs, filenames in os.walk(self.folder, followlinks=True):
-            # https://stackoverflow.com/questions/13454164/os-walk-without-hidden-folders
-            # ---
-            # CAREFUL: dirs[:] is necessary, since it overwrites the contents, not just
-            # the reference
-            filenames = [f for f in filenames if not f[0] == "."]
-            dirs[:] = [d for d in dirs if not d[0] == "."]
-
             for filename in filter(lambda f: f == course_yaml, filenames):
                 courses.append(Course.from_file(os.path.join(root, filename)))
 
