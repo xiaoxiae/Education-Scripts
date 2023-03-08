@@ -209,6 +209,7 @@ class Homeworks:
                     minute=course.time.start % 60,
                     second=0
                 )
+                next_time += timedelta(days=1)
                 while next_time.weekday() != course.weekday():
                     next_time += timedelta(days=1)
             else:
