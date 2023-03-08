@@ -202,15 +202,15 @@ class Homeworks:
                 break
 
         with open(os.path.join(hw_dir, f"{uid}.yaml"), "w") as f:
-            now = datetime.now()
             if course.time is not None:
                 # TODO: odd / even weeks are counted from semester start
-                next_time = now.replace(
+                next_time = datetime.now().replace(
                     hour=course.time.start // 60,
                     minute=course.time.start % 60,
                     second=0
                 )
-                while next_time.weekday() != course.weekday() or next_time < now:
+                next_time += timedelta(days=1)
+                while next_time.weekday() != course.weekday():
                     next_time += timedelta(days=1)
             else:
                 next_time = datetime.now().replace(second=0)
