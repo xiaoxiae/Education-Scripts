@@ -92,19 +92,6 @@ class Course(Strict):
         )
 
     @classmethod
-    def from_path(cls, path: str):
-        """Initialize a Course object from anywhere within its path."""
-        # go down until we find it
-        while path != os.path.dirname(path):
-            for f in os.listdir(path):
-                if f.endswith(".yaml"):
-                    return Course.from_file(os.path.join(path, f))
-            else:
-                path = os.path.dirname(path)
-
-        return None
-
-    @classmethod
     def from_file(cls, path: str):
         """Initialize a Course object from the path to its .yaml dictionary."""
         # descend 2 levels down, getting the name of the course directory
