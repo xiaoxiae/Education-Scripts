@@ -58,9 +58,25 @@ class Strict:
     def _from_dictionary(cls, c, d):
         """A helper function that converts a nested dictionary to a dataclass.
         Inspired by https://stackoverflow.com/a/54769644."""
-        if is_dataclass(c):
+
+        def _to_dataclass(c, d):
             fieldtypes = {f.name: f.type for f in fields(c)}
             return c(**{f: cls._from_dictionary(fieldtypes[f], d[f]) for f in d})
+
+        # NOTE: if we have a Union, this assumes it's either Type or List[Type]
+        if len(get_args(c)) != 0:
+            c, _ = get_args(c)
+
+            if is_dataclass(c):
+                if isinstance(d, List):
+                    for i in range(len(d)):
+                        d[i] = _to_dataclass(c, d[i])
+                else:
+                    d = _to_dataclass(c, d)
+
+        elif is_dataclass(c):
+            d = _to_dataclass(c, d)
+
         return d
 
     @classmethod

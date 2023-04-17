@@ -53,7 +53,7 @@ class Course(Strict):
     code: str = None
 
     teacher: Teacher = None
-    time: Time = None
+    time: Union[Time, List[Time]] = None
     classroom: Classroom = None
 
     website: Union[str, List[str]] = None
