@@ -61,6 +61,8 @@ class Course(Strict):
     online: str = None
     finals: Finals = None
 
+    credits: int = None
+
     # links to resources that were periodically updated with 'course update'
     # left for legacy reasons
     resources: Union[str, List[str]] = None
