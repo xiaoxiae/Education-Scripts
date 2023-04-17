@@ -146,7 +146,10 @@ class Courses:
         """Get all of the courses in no particular order."""
         courses: List[Course] = []
 
-        for root, dirs, filenames in os.walk(self.folder, followlinks=True):
+        for root, dirs, filenames in os.walk(self.folder, followlinks=True, topdown=True):
+            # skip hidden directories
+            dirs[:] = [d for d in dirs if not d[0] == '.']
+
             # if course_yaml is a hidden file, also search for non-hidden variants
             # (for backwards compatibility)
             is_course_yaml = lambda f: f == course_yaml \
