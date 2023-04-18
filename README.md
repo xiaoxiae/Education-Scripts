@@ -75,7 +75,7 @@ Lists all of the courses. The `<when>` can be either empty (listing all courses)
 ╰─────────────────────────────────────────────────────────────────╯
 ```
 
-If `<when>` is plain, only a simple list is produced:
+If `<when>` is `plain`, only a simple list is produced:
 
 ```
 ADS++-c
