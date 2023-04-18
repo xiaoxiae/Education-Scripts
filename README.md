@@ -250,6 +250,8 @@ finals:
 
 website: https://www.google.com
 online: https://zoom.us/j/96931706150
+
+credits: 8
 ```
 
 All of the root attributes values are optional, so even an empty `.yaml` file is a valid course identifier.
