@@ -295,10 +295,10 @@ class Courses:
                     table.append([f"{weekday if not short else weekday[:3]} / {date}"])
 
                 # for possibly surrounding the name with chars if it's ongoing
-                name_surround_char = "•" if course.is_ongoing() else ""
+                name_surround_char = "> " if course.is_ongoing() else ""
 
                 row = [
-                    f"{name_surround_char}{course.name if not short else course.abbreviation}{name_surround_char}",
+                    f"{name_surround_char}{course.name if not short else course.abbreviation}",
                     f"{minutes_to_HHMM(course.time.start)} -"
                     f" {minutes_to_HHMM(course.time.end)}"
                     + (
@@ -310,6 +310,10 @@ class Courses:
                     ),
                     "-" if course.classroom is None else course.classroom.number,
                 ]
+
+                # if the course type is something-number, add the number in parentheses
+                if course.type[-1].isnumeric():
+                    row[0] += f" ({course.type[-1]})"
 
                 # color the course name the appropriate color, depending on its type
                 row[0] = Ansi.color(row[0], course_types[course.type].color)

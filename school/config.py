@@ -26,6 +26,10 @@ course_types = {
     "přednáška": CourseType(39, False),
     "tutorial": CourseType(118, True),
     "lecture": CourseType(39, False),
+
+    # useful when a single course has multiple lectures per week
+    "lecture-1": CourseType(39, False),
+    "lecture-2": CourseType(39, False),
 }
 
 
