@@ -492,8 +492,8 @@ class Courses:
 
         def open_in_note_app(app: str, path: str):
             """Opens the specified file in its associated note app."""
-            if not shutil.which(app[0]):
-                exit_with_error(f"Note app '{app[0]}' not installed, can't open.")
+            if not shutil.which(app):
+                exit_with_error(f"Note app '{app}' not installed, can't open.")
 
             call([app, path])
 
