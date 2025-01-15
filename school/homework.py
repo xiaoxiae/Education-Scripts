@@ -245,7 +245,7 @@ class Homeworks:
                     [
                         "sed",
                         "-i",
-                        "s/^\s*completed\s*:\s*False\s*/completed: True/",
+                        r"s/^\s*completed\s*:\s*False\s*/completed: True/",
                         homework.path,
                     ]
                 )
@@ -265,7 +265,7 @@ class Homeworks:
                     [
                         "sed",
                         "-i",
-                        "s/^\s*completed\s*:\s*True\s*/completed: False/",
+                        r"s/^\s*completed\s*:\s*True\s*/completed: False/",
                         homework.path,
                     ]
                 )
