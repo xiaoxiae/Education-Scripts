@@ -82,7 +82,7 @@ class Homeworks:
 
         return sorted(
             filter(lambda h: h.deadline is not None or undeadlined, homeworks),
-            key=lambda h: h.deadline or datetime.max,
+            key=lambda h: (h.deadline or datetime.max, h.name),
         )
 
     def extrapolate(self, course: str = "", **kwargs):
