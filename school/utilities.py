@@ -1,6 +1,7 @@
 """A class that contains various useful utility methods."""
 
 import calendar
+from dataclasses import fields
 import os
 import re
 import sys
@@ -11,7 +12,7 @@ from dataclasses import *
 from pprint import pprint
 from typing import *
 
-import typesentry
+from beartype.door import is_bearable
 from yaml import YAMLError, safe_load
 
 from config import *
@@ -29,7 +30,7 @@ WD_EN = (
 
 def check_type(instance, type_hint):
     """Return True if instance corresponds to its type hint."""
-    return typesentry.Config().is_type(instance, type_hint)
+    return is_bearable(instance, type_hint)
 
 
 @dataclass
@@ -38,14 +39,14 @@ class Strict:
 
     def __post_init__(self):
         """Perform the check."""
-        for name, field_type in self.__annotations__.items():
-            value = self.__dict__[name]
+        for field in fields(self):
+            value = self.__dict__[field.name]
 
-            if value is not None and not check_type(value, field_type):
+            if value is not None and not check_type(value, field.type):
                 raise TypeError(
-                    f"The key '{name}' "
+                    f"The key '{field.name}' "
                     + f"in {self.__class__.__name__} "
-                    + f"expected type '{field_type}' "
+                    + f"expected type '{field.type}' "
                     + f"but got '{value}' instead."
                 )
 
